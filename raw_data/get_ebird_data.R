@@ -80,3 +80,20 @@ species_layers_df <- purrr::pmap(species_by_year, check_in_US) %>%
 usethis::use_data(species_layers_df)
 
 # Gotta deal with taxonomy - let's see what the deal is
+taxonomy <- read.csv(here::here("raw_data/eBird-Clements-v2023-integrated-checklist-October-2023.csv"))
+
+us_species <- species_layers_df %>%
+  filter(US == TRUE) %>%
+  pull(species_code)
+
+# these are the US species that had a taxonomic change between the 2021 and 2022 releases
+taxonomy %>%
+  filter(species_code %in% us_species, Clements.v2023.change != "") %>%
+  View()
+
+US_ebird <- species_layers_df %>%
+  filter(US == TRUE) %>%
+  filter(!species_code %in%
+           #remove two flycatchers that were lumped together for 2022
+           c("pasfly", "corfly")) %>%
+  select(-US)
