@@ -96,4 +96,9 @@ US_ebird <- species_layers_df %>%
   filter(!species_code %in%
            #remove two flycatchers that were lumped together for 2022
            c("pasfly", "corfly")) %>%
-  select(-US)
+  select(-US) %>%
+  mutate(filename = ifelse(year == 2021, paste(species_code, "abundance_seasonal_mean_hr_2021.tif", sep = "_"),
+                           paste(species_code, "abundance_seasonal_mean_3km_2022.tif", sep = "_")),
+         path = here::here("raw_data", year, species_code, "seasonal", filename))
+
+usethis::use_data(US_ebird)
