@@ -4,6 +4,7 @@ library(rnaturalearth)
 library(sf)
 library(terra)
 library(tidyterra)
+library(purrr)
 library(furrr)
 
 load(here::here("data/US_ebird.rda"))
@@ -158,6 +159,10 @@ load(here::here("data/US_ebird.rda"))
 #### binary range maps ###
 ##########################
 
+# get US boundary to crop
+US_boundary <- rnaturalearth::ne_states(iso_a2 = "US") %>%
+  vect() %>%
+  project("epsg:4326")
 
 #### resident species #####
 dir.create(here::here("data/species_ranges"))
@@ -176,7 +181,7 @@ resident_rasts <- furrr::future_pmap(resident_species, function(species_code, pa
   bird_rast <- terra::rast(path) %>%
     tidyterra::rename(!!species_code_enquo := resident) %>%
     project("epsg:4326") %>%
-    terra::classify(matrix(c(0,1,1), nrow = 1,byrow = TRUE), include.lowest = FALSE)
+    terra::classify(matrix(c(0, minmax(.)[2,1], 1), nrow = 1,byrow = TRUE), include.lowest = FALSE)
 
   writeRaster(bird_rast, here::here("data/species_ranges/resident", paste0(species_code, "_resident_range.tif")))
 
@@ -199,7 +204,7 @@ breeding_rasts <- furrr::future_pmap(breeding_species, function(species_code, pa
     .[["breeding"]] %>%
     tidyterra::rename(!!species_code_enquo := breeding) %>%
     project("epsg:4326") %>%
-    terra::classify(matrix(c(0,1,1), nrow = 1,byrow = TRUE), include.lowest = FALSE)
+    terra::classify(matrix(c(0, minmax(.)[2,1], 1), nrow = 1,byrow = TRUE), include.lowest = FALSE)
 
   writeRaster(bird_rast, here::here("data/species_ranges/breeding", paste0(species_code, "_breeding_range.tif")))
 
@@ -224,7 +229,7 @@ nonbreeding_rasts <- furrr::future_pmap(nonbreeding_species, function(species_co
     .[["nonbreeding"]] %>%
     tidyterra::rename(!!species_code_enquo := nonbreeding) %>%
     project("epsg:4326") %>%
-    terra::classify(matrix(c(0,1,1), nrow = 1,byrow = TRUE), include.lowest = FALSE)
+    terra::classify(matrix(c(0, minmax(.)[2,1], 1), nrow = 1,byrow = TRUE), include.lowest = FALSE)
 
   writeRaster(bird_rast, here::here("data/species_ranges/nonbreeding", paste0(species_code, "_nonbreeding_range.tif")))
 
