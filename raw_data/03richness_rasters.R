@@ -5,7 +5,8 @@ library(purrr)
 # get US boundary to crop
 US_boundary <- rnaturalearth::ne_states(iso_a2 = "US") %>%
   vect() %>%
-  project("epsg:4326")
+  project("epsg:4326") %>%
+  crop(ext(c(-130, -50, 18, 50)))
 
 # read in range map rasters
 
