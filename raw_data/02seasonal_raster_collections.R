@@ -29,6 +29,8 @@ boundary <- rbind(US_boundary, ecoregions) %>%
   aggregate() %>%
   fillHoles()
 
+writeVector(boundary, here::here("data/study_boundary.shp"))
+
 ###########################
 ####### this makes ########
 #### binary range maps ####
