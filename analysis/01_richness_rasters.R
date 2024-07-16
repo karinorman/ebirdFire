@@ -2,11 +2,8 @@ library(dplyr)
 library(terra)
 library(purrr)
 
-# get US boundary to crop
-US_boundary <- rnaturalearth::ne_states(iso_a2 = "US") %>%
-  vect() %>%
-  project("epsg:4326") %>%
-  crop(ext(c(-130, -50, 18, 50)))
+# get study extent to crop
+boundary <- vect(here::here("data/study_boundary.shp"))
 
 # read in range map rasters
 
@@ -31,9 +28,6 @@ breeding_rast <- rast(c(resident_files, breeding_files)) #%>%
 breeding_richness_rast <- app(breeding_rast, sum, na.rm = TRUE)
 
 writeRaster(breeding_richness_rast, here::here("data/breeding_richness.tif"))
-# this reaches memory limit
-# breeding_df <- terra::as.data.frame(breeding_rast, xy = TRUE)
-
 
 ##### Get single raster for nonbreeding + residents #####
 nonbreeding_rast <- rast(c(resident_files, nonbreeding_files)) #%>%
@@ -42,6 +36,11 @@ nonbreeding_rast <- rast(c(resident_files, nonbreeding_files)) #%>%
 nonbreeding_richness_rast <- app(nonbreeding_rast, sum, na.rm = TRUE)
 writeRaster(nonbreeding_richness_rast, here::here("data/nonbreeding_richness.tif"))
 
-# this reaches memory limit
-# nonbreeding_df <- terra::as.data.frame(nonbreeding_rast, xy = TRUE)
+#### Raster with breeding and nonbreeding as layers ####
+names(breeding_richness_rast) <- "breeding_richness"
+names(nonbreeding_richness_rast) <- "nonbreeding_richness"
+
+richness_rast <- c(breeding_richness_rast, nonbreeding_richness_rast) %>%
+  crop(boundary, mask = TRUE)
+writeRaster(richness_rast, here::here("data/richness_rast.tif"))
 
