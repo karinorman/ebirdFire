@@ -1,0 +1,69 @@
+library(dplyr)
+library(terra)
+library(tidyterra)
+library(purrr)
+library(ggplot2)
+
+#boundary <- vect(here::here("data/study_boundary.shp"))
+
+cbi <- rast(here::here("raw_data/predict.high.severity.fire.draft.tif"))
+#cbi_tfw <- rast(here::here("raw_data/predict.high.severity.fire.draft.tfw"))
+
+richness_rast <- rast(here::here("data/richness_rast.tif"))
+lcbd_rast <- rast(here::here("data/lcbd_rast.tiff"))
+
+# combine and crop raster
+metric_rast <- c(richness_rast, lcbd_rast) %>% crop(cbi, mask = TRUE)
+
+# # let's visualize it
+# ggplot() +
+#   geom_spatraster(data = metric_rast) +
+#   scale_fill_continuous(type = "viridis", na.value = "transparent") +
+#   facet_wrap(~lyr)
+
+# get raster of
+hotspot_rast <- metric_rast %>% mutate(across(everything(),
+                              ~ifelse(.x > quantile(.x, probs = 0.95, na.rm = TRUE), "a", NA)))
+
+
+hotspot_poly <- map(1:4, ~as.polygons(hotspot_rast[[.x]]))
+
+#this sort of works for visualization but the scales are way off
+hotspot_maps <- map(1:4, ~ ggplot() +
+      geom_spatraster(data = metric_rast[[.x]]) +
+      scale_fill_continuous(type = "viridis", na.value = "transparent") +
+      geom_spatvector(data = hotspot_poly[[.x]], color = "black", fill = "#FDE725FF") +
+      theme_void() +
+  ggtitle(label = names(metric_rast[[.x]])))
+
+hotspot_plot <- plot_grid(plotlist = hotspot_maps, nrow = 2)
+ggsave(here::here("figures/hotspot_maps.jpg"), hotspot_plot, width = 10, height = 10)
+
+# Let's get polygons for low and high severity fire
+low_sev <- cbi %>% filter(predict.high.severity.fire.draft == 1) %>%
+  as.polygons()
+
+high_sev <- cbi %>% filter(predict.high.severity.fire.draft == 2) %>%
+  as.polygons()
+
+# Now let's see the overlap with different hotspots
+layer_names <- names(hotspot_rast)
+
+area <- map(hotspot_poly, expanse) %>%
+  set_names(layer_names) %>%
+  as.data.frame() %>%
+  pivot_longer(everything(), names_to = "metric", values_to = "hotspot_area")
+
+lowsev_int <- map(hotspot_poly, ~ intersect(.x, low_sev) %>% expanse()) %>%
+  set_names(layer_names) %>%
+  as.data.frame() %>%
+  pivot_longer(everything(), names_to = "metric", values_to = "lowsev_intersect")
+
+highsev_int <- map(hotspot_poly, ~ intersect(.x, high_sev) %>% expanse()) %>%
+  set_names(layer_names) %>%
+  as.data.frame() %>%
+  pivot_longer(everything(), names_to = "metric", values_to = "highsev_intersect")
+
+overlap_df <- full_join(area, lowsev_int) %>%
+  full_join(highsev_int) %>%
+  mutate(percent_lowsev = (lowsev_intersect/hotspot_area)*100, percent_highsev = (highsev_intersect/hotspot_area)*100)
