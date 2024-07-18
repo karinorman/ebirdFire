@@ -53,18 +53,31 @@ nonbreeding_df <- plyr::join_all(nonbreeding_df_list, type = "full")
 usethis::use_data(breeding_df)
 usethis::use_data(nonbreeding_df)
 
+# get ecoregion labels for each cell
+# get template raster to compare ecoregions to
+ecoregions <- vect(here::here("raw_data/ecoregions/ecoregions_edc.shp")) %>%
+  project("epsg:4326")
+
+cell_coords <- breeding_df %>% select(cell, x, y)
+cell_coords_vec <- vect(cell_coords, geom = c("x", "y"), crs = "epsg:4326")
+
+ecoregion_int <- intersect(ecoregions, cell_coords_vec)
+ecoregion_int_df <- terra::as.data.frame(ecoregion_int %>% select(ECO_NAME, cell))
+
 ## Create occurrence matrices, include cell id for joining later
 breeding_mat <- breeding_df %>%
+  mutate(across(everything(), ~tidyr::replace_na(., 0))) %>%
   select(-c(x, y)) %>%
-  mutate(across(everything(), ~tidyr::replace_na(., 0)))
+  left_join(ecoregion_int_df)
 
 nonbreeding_mat <- nonbreeding_df %>%
+  mutate(across(everything(), ~tidyr::replace_na(., 0))) %>%
   select(-c(x, y)) %>%
-  mutate(across(everything(), ~tidyr::replace_na(., 0)))
+  left_join(ecoregion_int_df)
 
 # write out matrices
 write.table(breeding_mat, here::here("data/breeding_occ_mat.csv"), row.names = FALSE, sep=",")
 write.table(nonbreeding_mat, here::here("data/nonbreeding_occ_mat.csv"), row.names = FALSE, sep=",")
 
 # write out raster coords for each cell ID
-write.csv(breeding_df %>% select(cell, x, y), here::here("data/raster_coords.csv"), row.names = FALSE)
+write.csv(cell_coords, here::here("data/raster_coords.csv"), row.names = FALSE)
