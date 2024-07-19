@@ -63,7 +63,7 @@ high_sev <- cbi %>% filter(predict.high.severity.fire.draft == 2) %>%
   as.polygons()
 
 # Now let's see the overlap with different hotspots
-layer_names <- names(hotspot_rast)
+layer_names <- c(names(hotspot_rast), names(ecoregion_hotspot_rast))
 
 area <- map(hotspot_poly, expanse) %>%
   set_names(layer_names) %>%
