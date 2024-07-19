@@ -7,23 +7,23 @@ library(scales)
 library(cowplot)
 
 # testing things out
-
-breeding_97 <-quantile(values(test$breeding_lcbd), probs = 0.975, na.rm = TRUE)
-
-test <- lcbd_rast %>%
-  mutate(breeding_hotspot = ifelse(breeding_lcbd > breeding_97, "a", NA)) %>%
-  select(breeding_lcbd, breeding_hotspot)
-
-hotspot_poly <- as.polygons(test$breeding_hotspot)
-
-ggplot() +
-  geom_spatraster(data = test$breeding_lcbd) +
-  #scale_fill_viridis_c(limits = c(0.2, 1), oob = scales::squish, na.value = "transparent") +
-  scale_fill_continuous(type = "viridis", na.value = "transparent") +
-  geom_spatvector(data = hotspot_poly, color = "black", fill = "#FDE725FF") +
-  theme_void()
-  #scale_fill_discrete("red")
-  #scale_fill_manual(values = "red", na.value = "transparent")
+#
+# breeding_97 <-quantile(values(test$breeding_lcbd), probs = 0.975, na.rm = TRUE)
+#
+# test <- lcbd_rast %>%
+#   mutate(breeding_hotspot = ifelse(breeding_lcbd > breeding_97, "a", NA)) %>%
+#   select(breeding_lcbd, breeding_hotspot)
+#
+# hotspot_poly <- as.polygons(test$breeding_hotspot)
+#
+# ggplot() +
+#   geom_spatraster(data = test$breeding_lcbd) +
+#   #scale_fill_viridis_c(limits = c(0.2, 1), oob = scales::squish, na.value = "transparent") +
+#   scale_fill_continuous(type = "viridis", na.value = "transparent") +
+#   geom_spatvector(data = hotspot_poly, color = "black", fill = "#FDE725FF") +
+#   theme_void()
+#   #scale_fill_discrete("red")
+#   #scale_fill_manual(values = "red", na.value = "transparent")
 
 
 # maps of metrics for Western US
@@ -40,7 +40,7 @@ richness_plot <- ggplot() +
   theme_void()
 
 lcbd_plot <- ggplot() +
-  geom_spatraster(data = lcbd_rast) +
+  geom_spatraster(data = lcbd_rast %>% select(-c("breeding_quantile_cutoff", "nonbreeding_quantile_cutoff"))) +
   scale_fill_continuous(type = "viridis", na.value = "transparent", name = "lcbd") +
   #geom_spatvector(data = boundary, fill = "transparent") +
   facet_wrap(~lyr, labeller = as_labeller(c(`breeding_lcbd` = "",
