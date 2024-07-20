@@ -13,6 +13,11 @@ lcbd_rast <- rast(here::here("data/lcbd_rast.tiff"))
 
 cbi <- rast(here::here("raw_data/predict.high.severity.fire.draft.tif"))
 
+boundary <- terra::vect(here::here("data/study_boundary.shp"))
+
+ecoregions <- terra::vect(here::here("raw_data/ecoregions/ecoregions_edc.shp")) %>%
+  project("epsg:4326")
+
 # let's visualize it
 richness_plot <- ggplot() +
   geom_spatraster(data = richness_rast) +
@@ -111,3 +116,69 @@ bivar <- ggplot() +
 ggdraw() +
   draw_plot(bivar, 0, 0, 1, 1) +
   draw_plot(legend, 0.1, 0.3, 0.2, 0.2)
+
+
+
+### Let's try this excluding the non-forest cells
+# we need one raster with a "group" label for each cell
+quant_rast <- c(richness_quant %>% crop(cbi, mask = TRUE),
+                cbi %>% mutate(fire_quant = ifelse(predict.high.severity.fire.draft == 0, NA, ifelse(predict.high.severity.fire.draft == 1, 2, 3)))) %>%
+  #biodiversity metric is x, fire is y
+  mutate(plot_group = paste0(as.character(breeding_quantile), ",", as.character(fire_quant)),
+         plot_group = ifelse(plot_group %in% c("NA,NA", "1,NA", "2,NA", "3,NA"), NA, plot_group)) %>%
+  select(plot_group)
+
+color_assign <- setNames(pals::stevens.greenblue(n = 6), c("1,2", "2,2", "3,2", "1,3", "2,3", "3,3"))
+
+color_assign_df <- tibble::enframe(color_assign, name = "plot_group", value = "fill") %>%
+  tidyr::separate_wider_delim(plot_group, names = c("metric", "fire"), delim = ",") %>%
+  mutate(metric = as.integer(metric),
+         fire = as.integer(fire))
+
+legend <- ggplot() +
+  geom_tile(
+    data = color_assign_df,
+    mapping = aes(
+      x = metric,
+      y = fire,
+      fill = fill)
+  ) +
+  scale_fill_identity() +
+  theme_classic() +
+  labs(x="Species Richness \U2192",y="Fire Severity \U2192") +
+  # make font small enough
+  theme(
+    axis.title = element_text(size = 6),
+    axis.title.y = element_text(angle=90),
+    axis.line=element_blank(),
+    axis.ticks=element_blank(),
+    axis.text.x=element_blank(),
+    axis.text.y=element_blank(),
+    panel.background = element_rect(color = "white", fill = "white", linewidth = 10)
+  ) +
+  # quadratic tiles
+  coord_fixed()
+
+#background map
+US_boundary <- rnaturalearth::ne_states(iso_a2 = "US") %>%
+  vect() %>%
+  project("epsg:4326") %>%
+  filter(name %in% c("Washington", "Oregon", "California", "Idaho", "Nevada",
+                     "Montana", "Arizona", "Utah", "Wyoming", "Texas", "Colorado", "New Mexico")) %>%
+  crop(ext(c(-130, -103.5, 18, 50)))
+
+plot_ecoregions <- c("Canadian Rocky Mountains", "Middle Rockies - Blue Mountains", "Utah-Wyoming Rocky Mountains", "Southern Rocky Mountains",
+                     "Utah High Plateaus", "Colorado Plateau", "Apache Highlands")
+
+bivar <- ggplot() +
+  geom_spatvector(data = US_boundary, color = "black", fill = "transparent") +
+  #geom_spatvector(data = ecoregions %>% filter(ECO_NAME %in% plot_ecoregions) , color = "black", fill = "white") +
+  geom_spatraster(data = quant_rast) +
+  scale_fill_discrete(type = color_assign, na.value = "transparent", name = "species richness", guide = "none") +
+  theme_void()
+
+ggdraw() +
+  draw_plot(bivar, 0, 0, 1, 1) +
+  draw_plot(legend, 0.25, 0.4, 0.2, 0.2) #+
+  draw_plot(ggplot() + theme)
+
