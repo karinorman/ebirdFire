@@ -140,4 +140,4 @@ metrics <- full_join(breeding_lcbd, nonbreeding_lcbd) %>%
 # dataframe to raster
 metric_rast <- rast(metrics, type="xyz", crs = "epsg:4326")
 #save out
-writeRaster(metric_rast, here::here("data/lcbd_rast.tiff"))
+writeRaster(metric_rast, here::here("data/metric_rast.tiff"))
