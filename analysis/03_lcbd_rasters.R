@@ -95,7 +95,7 @@ ecoregion_breeding_lcbd <- breeding_mat %>%
   rename(ecoregion_breeding_lcbd = LCBD) %>%
   # let's do quantile calculation for hotspots now while we've got the ecoregion labels
   group_by(ECO_NAME) %>%
-  mutate(breeding_quantile_cutoff = quantile(ecoregion_breeding_lcbd, probs = 0.95, na.rm = TRUE))
+  mutate(lcbd_breeding_quantile_cutoff = quantile(ecoregion_breeding_lcbd, probs = 0.95, na.rm = TRUE))
 
 ecoregion_nonbreeding_lcbd <- nonbreeding_mat %>%
   filter(!is.na(ECO_NAME)) %>%
@@ -106,18 +106,38 @@ ecoregion_nonbreeding_lcbd <- nonbreeding_mat %>%
   rename(ecoregion_nonbreeding_lcbd = LCBD) %>%
   # let's do quantile calculation for hotspots now while we've got the ecoregion labels
   group_by(ECO_NAME) %>%
-  mutate(nonbreeding_quantile_cutoff = quantile(ecoregion_nonbreeding_lcbd, probs = 0.95, na.rm = TRUE))
+  mutate(lcbd_nonbreeding_quantile_cutoff = quantile(ecoregion_nonbreeding_lcbd, probs = 0.95, na.rm = TRUE))
 
-# join, column for each type of lcbd
-lcbd <- full_join(breeding_lcbd, nonbreeding_lcbd) %>%
+####################################
+####### Get species richness #######
+####################################
+breeding_richness <- breeding_mat %>%
+  select(cell, ECO_NAME, everything()) %>%
+  filter(!is.na(ECO_NAME)) %>%
+  mutate(breeding_richness = rowSums(across(3:last_col()))) %>%
+  select(cell, ECO_NAME, breeding_richness) %>%
+  group_by(ECO_NAME) %>%
+  mutate(breeding_quantile_cutoff = quantile(breeding_richness, probs = 0.95, na.rm = TRUE))
+
+nonbreeding_richness <- nonbreeding_mat %>%
+  select(cell, ECO_NAME, everything()) %>%
+  filter(!is.na(ECO_NAME)) %>%
+  mutate(nonbreeding_richness = rowSums(across(3:last_col()))) %>%
+  select(cell, ECO_NAME, nonbreeding_richness) %>%
+  group_by(ECO_NAME) %>%
+  mutate(nonbreeding_quantile_cutoff = quantile(nonbreeding_richness, probs = 0.95, na.rm = TRUE))
+
+# join, column for each metric
+metrics <- full_join(breeding_lcbd, nonbreeding_lcbd) %>%
   full_join(ecoregion_breeding_lcbd) %>%
   full_join(ecoregion_nonbreeding_lcbd) %>%
+  full_join(breeding_richness) %>%
+  full_join(nonbreeding_richness) %>%
   full_join(coords) %>%
   select(x, y, everything()) %>%
   select(-cell, -ECO_NAME)
 
 # dataframe to raster
-lcbd_rast <- rast(lcbd, type="xyz", crs = "epsg:4326")
-
+metric_rast <- rast(metrics, type="xyz", crs = "epsg:4326")
 #save out
-writeRaster(lcbd_rast, here::here("data/lcbd_rast.tiff"))
+writeRaster(metric_rast, here::here("data/lcbd_rast.tiff"))

@@ -2,9 +2,6 @@ library(dplyr)
 library(terra)
 library(purrr)
 
-# get study extent to crop
-boundary <- vect(here::here("data/study_boundary.shp"))
-
 # read in range map rasters
 
 # residents
@@ -40,7 +37,7 @@ writeRaster(nonbreeding_richness_rast, here::here("data/nonbreeding_richness.tif
 names(breeding_richness_rast) <- "breeding_richness"
 names(nonbreeding_richness_rast) <- "nonbreeding_richness"
 
-richness_rast <- c(breeding_richness_rast, nonbreeding_richness_rast) %>%
-  crop(boundary, mask = TRUE)
-writeRaster(richness_rast, here::here("data/richness_rast.tif"))
+richness_rast <- c(breeding_richness_rast, nonbreeding_richness_rast)
+
+writeRaster(richness_rast, here::here("data/global_richness_rast.tif"))
 
