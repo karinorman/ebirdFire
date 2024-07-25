@@ -148,7 +148,7 @@ legend <- ggplot() +
   labs(x="Species Richness \U2192",y="Fire Severity \U2192") +
   # make font small enough
   theme(
-    axis.title = element_text(size = 6),
+    axis.title = element_text(size = 20),
     axis.title.y = element_text(angle=90),
     axis.line=element_blank(),
     axis.ticks=element_blank(),
@@ -168,17 +168,18 @@ US_boundary <- rnaturalearth::ne_states(iso_a2 = "US") %>%
   crop(ext(c(-130, -103.5, 18, 50)))
 
 plot_ecoregions <- c("Canadian Rocky Mountains", "Middle Rockies - Blue Mountains", "Utah-Wyoming Rocky Mountains", "Southern Rocky Mountains",
-                     "Utah High Plateaus", "Colorado Plateau", "Apache Highlands")
+                     "Utah High Plateaus", "Colorado Plateau", "Apache Highlands", "Arizona-New Mexico Mountains")
 
 bivar <- ggplot() +
-  geom_spatvector(data = US_boundary, color = "black", fill = "transparent") +
-  #geom_spatvector(data = ecoregions %>% filter(ECO_NAME %in% plot_ecoregions) , color = "black", fill = "white") +
-  geom_spatraster(data = quant_rast) +
+  geom_spatvector(data = US_boundary, color = "black", fill = "transparent", alpha = 0.5) +
+  geom_spatvector(data = ecoregions %>% filter(ECO_NAME %in% plot_ecoregions) %>% terra::aggregate(), color = "black", fill = "white", linewidth = 0.4) +
+  #geom_spatvector(data = ecoregions %>% terra::aggregate(), color = "black", fill = "transparent", linetype = "dotted", linewidth = .4) +
+  geom_spatraster(data = quant_rast, maxcell = 2500000) +
   scale_fill_discrete(type = color_assign, na.value = "transparent", name = "species richness", guide = "none") +
   theme_void()
 
-ggdraw() +
+richness_cbi_bivar <- ggdraw() +
   draw_plot(bivar, 0, 0, 1, 1) +
-  draw_plot(legend, 0.25, 0.4, 0.2, 0.2) #+
-  draw_plot(ggplot() + theme)
+  draw_plot(legend, 0.25, 0.4, 0.2, 0.2)
 
+ggsave(here::here("figures/richness_cbi_bivar.jpg"), richness_cbi_bivar, width = 10, height = 10)
