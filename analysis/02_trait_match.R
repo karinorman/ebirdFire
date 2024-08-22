@@ -43,30 +43,3 @@ missing_sci_name_match %>%
     .default = NA
   )) %>%
   left_join(avonet, by = "Species2")
-
-#avonet_ebird <- avonet %>% filter(Species2 %in% species_list$scientific.name)
-avonet_ebird <- avonet %>% filter(Avibase.ID2 %in% toupper(species_list$taxon_concept_id))
-# missing_species_sciname <- species_list %>%
-#   filter(!scientific.name %in% avonet_ebird$Species2)
-
-missing_species_avibase <- species_list %>%
-  filter(!toupper(taxon_concept_id) %in% avonet_avibase$Avibase.ID2)
-
-avonet_sciname_match <- avonet %>% filter(Species2 %in% missing_species$scientific.name)
-
-avonet_ebird <- bind_rows(avonet_ebird, avonet_sciname_match)
-
-missing_species_sciname <- species_list %>%
-  filter(!scientific.name %in% avonet_ebird$Species2)
-
-# Create database for mapping to avonet
-# missing_mapping <- data.frame(ebird_sciname = missing_species$scientific.name,
-#                               avonet_sciname = c("Phasianus colchicus", "Streptopelia chinensis", "Bubulcus ibis",
-#                                                  "Empidonax occidentalis", "Gelochelidon nilotica", "Charadrius mongolus",
-#                                                  ""))
-
-missing_mapping <- data.frame(ebird_sciname = missing_species$scientific.name,
-                              avonet_sciname = c("Streptopelia decaocto", "Bubo virginianus", "Phasianus colchicus", NA, NA, NA, NA, NA))
-
-
-avonet_missing <- avonet %>% filter(Species2 %in% c("Phasianus colchicus", "Streptopelia chinensis"))
