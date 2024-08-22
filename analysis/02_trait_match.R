@@ -35,7 +35,7 @@ missing_sci_name_match <- match_sci_name %>% filter(is.na(Avibase.ID2))
 # two more missing that we'll match by hand based on the ebird documentation of
 # differences between 2021 and 2023 taxonomy
 # https://www.birds.cornell.edu/clementschecklist/introduction/updateindex/october-2022/updates-corrections-october-2022/
-missing_sci_name_match %>%
+final_match <- missing_sci_name_match %>%
   select(scientific.name, taxon_concept_id) %>%
   mutate(Species2 = case_when(
     scientific.name == "Accipiter atricapillus" ~ "Accipiter gentilis",
@@ -43,3 +43,12 @@ missing_sci_name_match %>%
     .default = NA
   )) %>%
   left_join(avonet, by = "Species2")
+
+avonet_ebird_matched <- bind_rows(avonet_ebird %>% filter(!is.na(Species2)),
+                          match_sci_name %>% filter(!is.na(Avibase.ID2)),
+                          final_match) %>%
+  select(scientific.name, taxon_concept_id, avonet_sciname = Species2, avonet_taxon_concept_id = Avibase.ID2, avonet_family = Family2, avonet_order = Order2,
+         Beak.Length_Culmen, Beak.Length_Nares, Beak.Width, Beak.Depth, Tarsus.Length, Wing.Length, Kipps.Distance, Secondary1, Hand.Wing.Index, Tail.Length,
+         Mass, Habitat, Habitat.Density, Migration, Trophic.Level, Trophic.Niche, Primary.Lifestyle)
+
+usethis::use_data(avonet_ebird_matched)
