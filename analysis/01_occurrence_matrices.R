@@ -79,5 +79,10 @@ nonbreeding_mat <- nonbreeding_df %>%
 write.table(breeding_mat, here::here("data/breeding_occ_mat.csv"), row.names = FALSE, sep=",")
 write.table(nonbreeding_mat, here::here("data/nonbreeding_occ_mat.csv"), row.names = FALSE, sep=",")
 
+# save out list of species
+species_list <- unique(c(colnames(breeding_mat %>% select(-cell )),
+                         colnames(nonbreeding_mat %>% select(-cell))))
+usethis::use_data(species_list)
+
 # write out raster coords for each cell ID
 write.csv(cell_coords, here::here("data/raster_coords.csv"), row.names = FALSE)
