@@ -141,3 +141,64 @@ metrics <- full_join(breeding_lcbd, nonbreeding_lcbd) %>%
 metric_rast <- rast(metrics, type="xyz", crs = "epsg:4326")
 #save out
 writeRaster(metric_rast, here::here("data/metric_rast.tiff"))
+
+########################################
+####### Get functional diversity #######
+########################################
+
+library(fundiversity)
+
+load(here::here("data/avonet_ebird_matched.rda"))
+breeding_mat <- read.csv(here::here("data/breeding_occ_mat.csv"))
+
+breeding_cells <- select(breeding_mat, cell)
+nonbreeding_cells <- select(nonbreeding_mat, cell)
+
+# order species just to be sure
+avonet_ebird_matched <- avonet_ebird_matched %>%
+  arrange(species_code)
+
+# create trait matrix using all available avonet traits
+trait_mat <- avonet_ebird_matched %>%
+  select(-c(species_code, taxon_concept_id, avonet_sciname, avonet_taxon_concept_id, avonet_family, avonet_order)) %>%
+  mutate(across(where(is.numeric), ~scale(.x, center = TRUE, scale = TRUE))) %>%
+  data.matrix()
+
+# get pairwise distance matrix
+dist_mat <- StatMatch::gower.dist(trait_mat) %>% dist()
+
+# PCoA for dimension reduction
+pcoa <- ade4::dudi.pco(dist_mat, scannf = FALSE, full = TRUE)
+trait_axes <- pcoa$li[,1:4]
+rownames(trait_axes) <- avonet_ebird_matched$species_code
+
+# site by species matrix
+breeding_mat <- breeding_mat %>%
+  select(-cell) %>%
+  select(order(colnames(.)))
+
+
+
+# compute FRic
+future::plan(future::multisession, workers = 4)
+options(future.globals.maxSize = 400e7)
+
+fric_df <- fd_fric(trait_axes, breeding_mat)
+feve_df <- fd_feve(trait_axes, breeding_mat)
+fdiv_df <- fd_fdiv(trait_axes, breeding_mat)
+#fdis_df <- fd_fdis(trait_axes, breeding_mat)
+
+fd_metric_breeding <- bind_cols(breeding_cells, fric_df) %>%
+  left_join(feve_df) %>%
+  left_join(fdiv_df) %>%
+  #left_join(fdis_df) %>%
+  select(-site) %>%
+  full_join(coords) %>%
+  select(-cell) %>%
+  select(x, y, everything())
+
+usethis::use_data(fd_metric_breeding)
+# dataframe to raster
+breeding_fd_rast <- rast(fd_metric_breeding, type="xyz", crs = "epsg:4326")
+#save out
+writeRaster(breeding_fd_rast, here::here("data/breeding_fd_rast.tiff"))
