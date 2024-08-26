@@ -151,8 +151,8 @@ library(fundiversity)
 load(here::here("data/avonet_ebird_matched.rda"))
 breeding_mat <- read.csv(here::here("data/breeding_occ_mat.csv"))
 
-breeding_cells <- select(breeding_mat, cell)
-nonbreeding_cells <- select(nonbreeding_mat, cell)
+breeding_cells <- select(breeding_mat, cell, ECO_NAME)
+nonbreeding_cells <- select(nonbreeding_mat, cell, ECO_NAME)
 
 # order species just to be sure
 avonet_ebird_matched <- avonet_ebird_matched %>%
@@ -194,7 +194,10 @@ fd_metric_breeding <- bind_cols(breeding_cells, fric_df) %>%
   #left_join(fdis_df) %>%
   select(-site) %>%
   full_join(coords) %>%
-  select(-cell) %>%
+  group_by(ECO_NAME) %>%
+  mutate(across(c(FRic, FEve, FDiv), ~ quantile(.x, probs = 0.95, na.rm = TRUE), .names = "quantile_{col}")) %>%
+  ungroup() %>%
+  select(-cell, -ECO_NAME) %>%
   select(x, y, everything())
 
 usethis::use_data(fd_metric_breeding)
