@@ -201,7 +201,7 @@ fd_metric_breeding <- bind_cols(breeding_cells, fric_df_breeding) %>%
   select(-site) %>%
   full_join(coords) %>%
   group_by(ECO_NAME) %>%
-  mutate(across(c(FRic, FEve, FDiv), ~ quantile(.x, probs = 0.95, na.rm = TRUE), .names = "quantile_{col}")) %>%
+  mutate(across(c(FRic, FEve, FDiv), ~ quantile(.x, probs = 0.95, na.rm = TRUE), .names = "{col}_quantile")) %>%
   ungroup() %>%
   select(-cell, -ECO_NAME) %>%
   select(x, y, everything()) %>%
@@ -214,7 +214,7 @@ fd_metric_nonbreeding <- bind_cols(nonbreeding_cells, fric_df_nonbreeding) %>%
   select(-site) %>%
   full_join(coords) %>%
   group_by(ECO_NAME) %>%
-  mutate(across(c(FRic, FEve, FDiv), ~ quantile(.x, probs = 0.95, na.rm = TRUE), .names = "quantile_{col}")) %>%
+  mutate(across(c(FRic, FEve, FDiv), ~ quantile(.x, probs = 0.95, na.rm = TRUE), .names = "{col}_quantile")) %>%
   ungroup() %>%
   select(-cell, -ECO_NAME) %>%
   select(x, y, everything()) %>%
