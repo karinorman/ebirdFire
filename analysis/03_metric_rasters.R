@@ -149,7 +149,6 @@ writeRaster(metric_rast, here::here("data/metric_rast.tiff"))
 library(fundiversity)
 
 load(here::here("data/avonet_ebird_matched.rda"))
-breeding_mat <- read.csv(here::here("data/breeding_occ_mat.csv"))
 
 breeding_cells <- select(breeding_mat, cell, ECO_NAME)
 nonbreeding_cells <- select(nonbreeding_mat, cell, ECO_NAME)
@@ -177,20 +176,27 @@ breeding_mat <- breeding_mat %>%
   select(-cell) %>%
   select(order(colnames(.)))
 
-
+nonbreeding_mat <- nonbreeding_mat %>%
+  select(-cell) %>%
+  select(order(colnames(.)))
 
 # compute FRic
 future::plan(future::multisession, workers = 4)
 options(future.globals.maxSize = 400e7)
 
-fric_df <- fd_fric(trait_axes, breeding_mat)
-feve_df <- fd_feve(trait_axes, breeding_mat)
-fdiv_df <- fd_fdiv(trait_axes, breeding_mat)
-#fdis_df <- fd_fdis(trait_axes, breeding_mat)
+fric_df_breeding <- fd_fric(trait_axes, breeding_mat)
+feve_df_breeding <- fd_feve(trait_axes, breeding_mat)
+fdiv_df_breeding <- fd_fdiv(trait_axes, breeding_mat)
+#fdis_df_breeding <- fd_fdis(trait_axes, breeding_mat)
 
-fd_metric_breeding <- bind_cols(breeding_cells, fric_df) %>%
-  left_join(feve_df) %>%
-  left_join(fdiv_df) %>%
+fric_df_nonbreeding <- fd_fric(trait_axes, nonbreeding_mat)
+feve_df_nonbreeding <- fd_feve(trait_axes, nonbreeding_mat)
+fdiv_df_nonbreeding <- fd_fdiv(trait_axes, nonbreeding_mat)
+#fdis_df_breeding <- fd_fdis(trait_axes, breeding_mat)
+
+fd_metric_breeding <- bind_cols(breeding_cells, fric_df_breeding) %>%
+  left_join(feve_df_breeding) %>%
+  left_join(fdiv_df_breeding) %>%
   #left_join(fdis_df) %>%
   select(-site) %>%
   full_join(coords) %>%
@@ -198,10 +204,27 @@ fd_metric_breeding <- bind_cols(breeding_cells, fric_df) %>%
   mutate(across(c(FRic, FEve, FDiv), ~ quantile(.x, probs = 0.95, na.rm = TRUE), .names = "quantile_{col}")) %>%
   ungroup() %>%
   select(-cell, -ECO_NAME) %>%
-  select(x, y, everything())
+  select(x, y, everything()) %>%
+  rename_with(.cols = -c(x,y), ~paste0(.x, "_breeding"))
+
+fd_metric_nonbreeding <- bind_cols(nonbreeding_cells, fric_df_nonbreeding) %>%
+  left_join(feve_df_nonbreeding) %>%
+  left_join(fdiv_df_nonbreeding) %>%
+  #left_join(fdis_df) %>%
+  select(-site) %>%
+  full_join(coords) %>%
+  group_by(ECO_NAME) %>%
+  mutate(across(c(FRic, FEve, FDiv), ~ quantile(.x, probs = 0.95, na.rm = TRUE), .names = "quantile_{col}")) %>%
+  ungroup() %>%
+  select(-cell, -ECO_NAME) %>%
+  select(x, y, everything()) %>%
+  rename_with(.cols = -c(x,y), ~paste0(.x, "_nonbreeding"))
 
 usethis::use_data(fd_metric_breeding)
+usethis::use_data(fd_metric_nonbreeding)
+
 # dataframe to raster
-breeding_fd_rast <- rast(fd_metric_breeding, type="xyz", crs = "epsg:4326")
+fd_rast <- c(rast(fd_metric_breeding, type="xyz", crs = "epsg:4326"),
+             rast(fd_metric_nonbreeding, type="xyz", crs = "epsg:4326"))
 #save out
-writeRaster(breeding_fd_rast, here::here("data/breeding_fd_rast.tiff"))
+writeRaster(fd_rast, here::here("data/fd_rast.tiff"))
