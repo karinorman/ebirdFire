@@ -109,25 +109,19 @@ ggsave(here::here("figures/hotspot_maps_big_legend.jpg"), hotspot_plot, width = 
 ggsave(here::here("figures/hotspot_maps_small_legend.jpg"), hotspot_plot, width = 30, height = 30, dpi = "retina")
 
 
-# Now let's see the overlap with different hotspots
-layer_names <- c(names(hotspot_rast), names(ecoregion_hotspot_rast))
-
 # we want the area relative to that in the CBI extent
 # this is NOT RIGHT for the non-ecoregion hotspots, since those quantiles were calculated relative
 # to the whole study extent, not just CBI, so only use the ecoregion overlap!
 area <-  map(hotspot_poly, ~crop(.x, cbi)) %>%
   map(., expanse) %>%
-  set_names(layer_names) %>%
   as.data.frame() %>%
   pivot_longer(everything(), names_to = "metric", values_to = "hotspot_area")
 
 lowsev_int <- map(hotspot_poly, ~ terra::intersect(.x, low_sev) %>% expanse()) %>%
-  set_names(layer_names) %>%
   as.data.frame() %>%
   pivot_longer(everything(), names_to = "metric", values_to = "lowsev_intersect")
 
 highsev_int <- map(hotspot_poly, ~ intersect(.x, high_sev) %>% expanse()) %>%
-  set_names(layer_names) %>%
   as.data.frame() %>%
   pivot_longer(everything(), names_to = "metric", values_to = "highsev_intersect")
 
