@@ -32,10 +32,10 @@ ecoregion_hotspot_rast <- metric_rast %>%
 
 # Ecoregion quantiles for fd metrics
 ecoregion_fd_hotspot_rast <- fd_rast %>%
-  mutate(across(-starts_with("quantile"), ~ifelse(.x > get(paste0("quantile_", cur_column())), "a", NA)))
+  mutate(across(-starts_with("quantile"), ~ifelse(.x > get(paste0("quantile_", cur_column())), "a", NA))) %>%
+  select(-starts_with("quantile_")) %>%
+  rename_with(~paste0("ecoregion_", .x))
 
-
-## danger! this depends on layer order! ##
 hotspot_poly <- c(map(1:length(names(hotspot_rast)), ~as.polygons(hotspot_rast[[.x]])),
                   map(1:length(names(ecoregion_hotspot_rast)), ~as.polygons(ecoregion_hotspot_rast[[.x]])),
                   map(1:length(names(ecoregion_fd_hotspot_rast)), ~as.polygons(ecoregion_fd_hotspot_rast[[.x]])))
@@ -54,7 +54,9 @@ highsev_int_poly <- map(hotspot_poly, ~ intersect(.x, high_sev))
 
 # get metric layers in the right order
 metrics <- c(metric_rast, fd_rast) %>%
-  mutate(ecoregion_breeding_richness = breeding_richness, ecoregion_nonbreeding_richness = nonbreeding_richness) %>%
+  select(-ends_with("_quantile_cutoff")) %>%
+  mutate(across(c(breeding_richness, nonbreeding_richness, starts_with("FRic"), starts_with("FEve"), starts_with("FDiv")), .names = "ecoregion_{col}")) %>%
+  #mutate(ecoregion_breeding_richness = breeding_richness, ecoregion_nonbreeding_richness = nonbreeding_richness) %>%
   # select(breeding_lcbd, nonbreeding_lcbd, breeding_richness, nonbreeding_richness,
   #        ecoregion_breeding_lcbd, ecoregion_nonbreeding_lcbd) %>%
   select(names(hotspot_poly))
