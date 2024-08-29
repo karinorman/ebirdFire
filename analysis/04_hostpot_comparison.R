@@ -128,3 +128,5 @@ highsev_int <- map(hotspot_poly, ~ intersect(.x, high_sev) %>% expanse()) %>%
 overlap_df <- full_join(area, lowsev_int) %>%
   full_join(highsev_int) %>%
   mutate(percent_lowsev = (lowsev_intersect/hotspot_area)*100, percent_highsev = (highsev_intersect/hotspot_area)*100)
+
+usethis::use_data(overlap_df)
