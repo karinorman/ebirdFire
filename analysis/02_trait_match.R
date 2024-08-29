@@ -47,7 +47,8 @@ final_match <- missing_sci_name_match %>%
 avonet_ebird_matched <- bind_rows(avonet_ebird %>% filter(!is.na(Species2)),
                           match_sci_name %>% filter(!is.na(Avibase.ID2)),
                           final_match) %>%
-  select(scientific.name, taxon_concept_id, avonet_sciname = Species2, avonet_taxon_concept_id = Avibase.ID2, avonet_family = Family2, avonet_order = Order2,
+  left_join(species_list %>% select(scientific.name, species_code)) %>%
+  select(species_code, scientific.name, taxon_concept_id, avonet_sciname = Species2, avonet_taxon_concept_id = Avibase.ID2, avonet_family = Family2, avonet_order = Order2,
          Beak.Length_Culmen, Beak.Length_Nares, Beak.Width, Beak.Depth, Tarsus.Length, Wing.Length, Kipps.Distance, Secondary1, Hand.Wing.Index, Tail.Length,
          Mass, Habitat, Habitat.Density, Migration, Trophic.Level, Trophic.Niche, Primary.Lifestyle)
 
