@@ -130,3 +130,30 @@ overlap_df <- full_join(area, lowsev_int) %>%
   mutate(percent_lowsev = (lowsev_intersect/hotspot_area)*100, percent_highsev = (highsev_intersect/hotspot_area)*100)
 
 usethis::use_data(overlap_df)
+
+
+#### Quadrants of Concern ####
+metric_stack <- c(metric_rast, fd_rast, cbi) %>%
+  select(cbi = predict.high.severity.fire.draft, breeding_lcbd, nonbreeding_lcbd, breeding_richness, nonbreeding_richness,
+         FRic_breeding, FEve_breeding, FDiv_breeding,
+         FRic_nonbreeding, FEve_nonbreeding, FDiv_nonbreeding)
+
+metric_stack_df <- as.data.frame(metric_stack, xy = TRUE)
+
+#low severity histogram of lcbd
+metric_stack_df %>%
+  filter(cbi == 1) %>%
+  pull(breeding_lcbd) %>%
+  hist()
+
+# high severity histogram of lcbd
+
+metric_stack_df %>%
+  filter(cbi == 2) %>%
+  pull(breeding_lcbd) %>%
+  hist()
+
+metric_stack_df %>%
+  filter(cbi %in% c(1,2)) %>%
+  ggplot(aes(x = breeding_lcbd, fill = as.factor(cbi))) +
+  geom_histogram(alpha = 0.2, position = "identity")
