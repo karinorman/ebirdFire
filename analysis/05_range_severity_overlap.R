@@ -76,7 +76,9 @@ get_intersect <- function(species_polys, cbi_poly){
     select(species_code, percent)
 }
 
-percent_highsev_df <- get_intersect(compact(resident_polys), high_sev) %>%
+percent_range_highsev_df <- get_intersect(compact(resident_polys), high_sev) %>%
   rename(resident_percent = percent) %>%
   full_join(get_intersect(compact(breeding_polys), high_sev) %>% rename(breeding_percent = percent)) %>%
   full_join(get_intersect(compact(nonbreeding_polys), high_sev) %>% rename(nonbreeding_percent = percent))
+
+usethis::use_data(percent_range_highsev_df)
