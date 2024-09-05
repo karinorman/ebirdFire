@@ -206,14 +206,14 @@ plot_metric_density <- function(metric_col){
       aes(x = x, y = density, fill = plot_group), position = "identity", alpha = 0.60, color = "black"
     ) +
     scale_fill_manual(values = pal) +
-    guides(fill=guide_legend(title=element_blank()), color = guide_legend(element_blank())) +
+    guides(fill=guide_legend(title=element_blank())) +
     theme_classic() +
     xlab(metric_col) +
     theme(axis.line.y=element_blank(),
           axis.text.y=element_blank(),axis.ticks.y=element_blank(),
           axis.title.y=element_blank()) +
     geom_vline(aes(xintercept = mean, color = as.factor(cbi))) +
-    scale_color_manual(values = pal_line)
+    scale_color_manual(values = pal_line, guide = "none")
 }
 
 plot_metric_density("breeding_lcbd")
