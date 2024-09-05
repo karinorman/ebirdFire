@@ -139,37 +139,37 @@ metric_stack <- c(metric_rast, fd_rast, cbi) %>%
          FRic_nonbreeding, FEve_nonbreeding, FDiv_nonbreeding)
 
 metric_stack_df <- as.data.frame(metric_stack, xy = TRUE)
-
-density_plt <- metric_stack_df %>%
-  filter(cbi %in% c(1,2)) %>%
-  ggplot(aes(x = breeding_lcbd, fill = as.factor(cbi))) +
-  geom_density(alpha = 0.25) +
-  theme_classic()
-
-build <- ggplot2::ggplot_build(density_plt)
-
-df_breaks <- build$data[[1]] %>%
-  group_by(fill) %>%
-  mutate(mean_val = mean(x),
-         severity = ifelse(fill == "#00BFC4", "low severity", "high severity"),
-         status = ifelse(x < mean_val, "low lcbd", "high lcbd")) %>%
-  ungroup() %>%
-  mutate(plot_group = paste(severity, status))
-
-pal <- list(`low severity low lcbd` = "#c9d5c5", `low severity high lcbd` = "#77976e",
-            `high severity low lcbd` = "#fee48e", `high severity high lcbd` = "#e1ad01")
-df_breaks %>%
-  ggplot() +
-  geom_area(
-    aes(x = x, y = y, fill = plot_group)
-  ) +
-  scale_fill_manual(values = pal) +
-  guides(fill=guide_legend(title=element_blank())) +
-  theme_classic() +
-  xlab("Breeding LCBD") +
-  theme(axis.line.y=element_blank(),
-        axis.text.y=element_blank(),axis.ticks.y=element_blank(),
-        axis.title.y=element_blank())
+#
+# density_plt <- metric_stack_df %>%
+#   filter(cbi %in% c(1,2)) %>%
+#   ggplot(aes(x = breeding_lcbd, fill = as.factor(cbi))) +
+#   geom_density(alpha = 0.25) +
+#   theme_classic()
+#
+# build <- ggplot2::ggplot_build(density_plt)
+#
+# df_breaks <- build$data[[1]] %>%
+#   group_by(fill) %>%
+#   mutate(mean_val = mean(x),
+#          severity = ifelse(fill == "#00BFC4", "low severity", "high severity"),
+#          status = ifelse(x < mean_val, "low lcbd", "high lcbd")) %>%
+#   ungroup() %>%
+#   mutate(plot_group = paste(severity, status))
+#
+# pal <- list(`low severity low lcbd` = "#c9d5c5", `low severity high lcbd` = "#77976e",
+#             `high severity low lcbd` = "#fee48e", `high severity high lcbd` = "#e1ad01")
+# df_breaks %>%
+#   ggplot() +
+#   geom_area(
+#     aes(x = x, y = y, fill = plot_group)
+#   ) +
+#   scale_fill_manual(values = pal) +
+#   guides(fill=guide_legend(title=element_blank())) +
+#   theme_classic() +
+#   xlab("Breeding LCBD") +
+#   theme(axis.line.y=element_blank(),
+#         axis.text.y=element_blank(),axis.ticks.y=element_blank(),
+#         axis.title.y=element_blank())
 
 
 plot_metric_density <- function(metric_col){
