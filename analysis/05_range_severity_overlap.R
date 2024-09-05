@@ -73,12 +73,12 @@ get_intersect <- function(species_polys, cbi_poly){
   area_df %>%
     left_join(intersect_df) %>%
     mutate(intersect = replace_na(intersect,0), percent = intersect/area) %>%
-    select(species_code, percent)
+    select(species_code, percent, area)
 }
 
 percent_range_highsev_df <- get_intersect(compact(resident_polys), high_sev) %>%
-  rename(resident_percent = percent) %>%
-  full_join(get_intersect(compact(breeding_polys), high_sev) %>% rename(breeding_percent = percent)) %>%
-  full_join(get_intersect(compact(nonbreeding_polys), high_sev) %>% rename(nonbreeding_percent = percent))
+  rename(resident_percent = percent, resident_area = area) %>%
+  full_join(get_intersect(compact(breeding_polys), high_sev) %>% rename(breeding_percent = percent, breeding_area = area)) %>%
+  full_join(get_intersect(compact(nonbreeding_polys), high_sev) %>% rename(nonbreeding_percent = percent, nonbreeding_area = area))
 
 usethis::use_data(percent_range_highsev_df)
