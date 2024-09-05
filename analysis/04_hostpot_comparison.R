@@ -171,3 +171,102 @@ df_breaks %>%
         axis.text.y=element_blank(),axis.ticks.y=element_blank(),
         axis.title.y=element_blank())
 
+
+plot_metric_density <- function(metric_col){
+  col = sym(metric_col)
+
+  means <-metric_stack_df %>%
+    filter(cbi %in% c(1,2)) %>%
+    group_by(cbi) %>%
+    summarize(mean = mean(!!col))
+
+  hold_plt <- metric_stack_df %>%
+    filter(cbi %in% c(1,2)) %>%
+    ggplot(aes(x = !!col, fill = as.factor(cbi))) +
+    geom_density(alpha = 0.25)
+
+  build <- ggplot2::ggplot_build(hold_plt)
+
+  df_breaks <- build$data[[1]] %>%
+    group_by(fill) %>%
+    mutate(cbi = ifelse(fill == "#00BFC4", 1, 2),
+           severity = ifelse(fill == "#00BFC4", "low severity", "high severity")) %>%
+    ungroup() %>%
+    left_join(means) %>%
+    mutate(status = ifelse(x < mean, "low biodiv value", "high biodiv value")) %>%
+    mutate(plot_group = paste(severity, status))
+
+  pal <- list(`low severity low biodiv value` = "#fee48e", `low severity high biodiv value` = "#e1ad01",
+              `high severity low biodiv value` = "#f4afae", `high severity high biodiv value` = "#bd1b19")
+  pal_line <- list(`1` = "#e1ad01", `2` =  "#bd1b19" )
+
+  df_breaks %>%
+    ggplot() +
+    geom_area(
+      aes(x = x, y = density, fill = plot_group), position = "identity", alpha = 0.60, color = "black"
+    ) +
+    scale_fill_manual(values = pal) +
+    guides(fill=guide_legend(title=element_blank()), color = guide_legend(element_blank())) +
+    theme_classic() +
+    xlab(metric_col) +
+    theme(axis.line.y=element_blank(),
+          axis.text.y=element_blank(),axis.ticks.y=element_blank(),
+          axis.title.y=element_blank()) +
+    geom_vline(aes(xintercept = mean, color = as.factor(cbi))) +
+    scale_color_manual(values = pal_line)
+}
+
+plot_metric_density("breeding_lcbd")
+
+metric_names <- colnames(metric_stack_df)[!colnames(metric_stack_df) %in% c("x", "y", "cbi")]
+
+map(metric_names,plot_metric_density)
+
+
+# trying with geom area
+
+p <- metric_stack_df %>%
+  filter(cbi %in% c(1,2)) %>%
+  group_by(cbi) %>%
+  mutate(mean = mean(breeding_lcbd)) %>%
+  ggplot(aes(x = breeding_lcbd, fill = as.factor(cbi))) +
+  geom_density(alpha = 0.25) +
+  geom_vline(aes(xintercept = mean, color = as.factor(cbi))) +
+  theme_classic()
+
+d <- ggplot_build(p)$data[[1]]
+
+p + geom_ribbon(data = subset(d, x > .5), aes(x = x, ymax = density), ymin = 0, fill="red")# +
+  # geom_segment(x=rand1, xend=rand1,
+  #              y=0, yend=approx(x = d$x, y = d$y, xout = rand1)$y,
+  #              colour="blue", size=3)
+
+
+# trying with ggfx
+means <-metric_stack_df %>%
+  filter(cbi %in% c(1,2)) %>%
+  group_by(cbi) %>%
+  summarize(mean = mean(breeding_lcbd))
+
+metric_stack_df %>%
+  filter(cbi %in% c(1,2)) %>%
+  group_by(cbi) %>%
+  mutate(mean = mean(breeding_lcbd)) %>%
+  ggplot(aes(x = breeding_lcbd, fill = as.factor(cbi))) +
+  as_reference(geom_density(alpha = 0.25), id = "density1") +
+  with_blend(annotate("rect", xmin = means %>% filter(cbi ==1) %>% pull(mean), xmax = 1, ymin = -Inf, ymax = Inf,
+                      fill = "blue"), bg_layer = "density", blend_type = "atop")+
+  geom_vline(aes(xintercept = mean, color = as.factor(cbi))) +
+  theme_classic()
+
+#trying with geom_ribbon
+metric_stack_df %>%
+  mutate(cbi = as.factor(cbi)) %>%
+  filter(cbi %in% c(1,2)) %>%
+  group_by(cbi) %>%
+  mutate(mean = mean(breeding_lcbd)) %>%
+  ggplot(aes(x = breeding_lcbd, fill = as.factor(cbi))) +
+  geom_density(alpha = 0.25) +
+  #geom_vline(aes(xintercept = mean, color = as.factor(cbi))) +
+  theme_classic() +
+  geom_ribbon(aes(xmin =  0.5, ymin = 0, ymax = y))#, fill = as.factor(cbi)))
