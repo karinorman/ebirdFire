@@ -183,3 +183,188 @@ richness_cbi_bivar <- ggdraw() +
   draw_plot(legend, 0.25, 0.4, 0.2, 0.2)
 
 ggsave(here::here("figures/richness_cbi_bivar.jpg"), richness_cbi_bivar, width = 10, height = 10)
+
+
+####################################
+######## Density Plots #############
+####################################
+
+metric_rast <- rast(here::here("data/metric_rast.tiff"))
+fd_rast <- rast(here::here("data/fd_rast.tiff"))
+
+#### Quadrants of Concern ####
+ecoregions <- vect(here::here("raw_data/ecoregions/ecoregions_edc.shp")) %>%
+  project("epsg:4326") %>%
+  rasterize(., metric_rast, field = "ECO_NAME")
+
+metric_stack <- c(metric_rast, fd_rast, ecoregions) %>%
+  crop(., cbi) %>%
+  c(., cbi) %>%
+  select(cbi = predict.high.severity.fire.draft, breeding_lcbd, nonbreeding_lcbd, breeding_richness, nonbreeding_richness,
+         FRic_breeding, FEve_breeding, FDiv_breeding,
+         FRic_nonbreeding, FEve_nonbreeding, FDiv_nonbreeding, ecoregion = ECO_NAME)
+
+metric_stack_df <- as.data.frame(metric_stack, xy = TRUE)
+#
+# density_plt <- metric_stack_df %>%
+#   filter(cbi %in% c(1,2)) %>%
+#   ggplot(aes(x = breeding_lcbd, fill = as.factor(cbi))) +
+#   geom_density(alpha = 0.25) +
+#   theme_classic()
+#
+# build <- ggplot2::ggplot_build(density_plt)
+#
+# df_breaks <- build$data[[1]] %>%
+#   group_by(fill) %>%
+#   mutate(mean_val = mean(x),
+#          severity = ifelse(fill == "#00BFC4", "low severity", "high severity"),
+#          status = ifelse(x < mean_val, "low lcbd", "high lcbd")) %>%
+#   ungroup() %>%
+#   mutate(plot_group = paste(severity, status))
+#
+# pal <- list(`low severity low lcbd` = "#c9d5c5", `low severity high lcbd` = "#77976e",
+#             `high severity low lcbd` = "#fee48e", `high severity high lcbd` = "#e1ad01")
+# df_breaks %>%
+#   ggplot() +
+#   geom_area(
+#     aes(x = x, y = y, fill = plot_group)
+#   ) +
+#   scale_fill_manual(values = pal) +
+#   guides(fill=guide_legend(title=element_blank())) +
+#   theme_classic() +
+#   xlab("Breeding LCBD") +
+#   theme(axis.line.y=element_blank(),
+#         axis.text.y=element_blank(),axis.ticks.y=element_blank(),
+#         axis.title.y=element_blank())
+
+
+plot_metric_density <- function(metric_col){
+  col = sym(metric_col)
+
+  means <- metric_stack_df %>%
+    filter(cbi %in% c(1,2)) %>%
+    group_by(cbi) %>%
+    summarize(mean = mean(!!col))
+
+  hold_plt <- metric_stack_df %>%
+    filter(cbi %in% c(1,2)) %>%
+    ggplot(aes(x = !!col, fill = as.factor(cbi))) +
+    geom_density(alpha = 0.25)
+
+  build <- ggplot2::ggplot_build(hold_plt)
+
+  df_breaks <- build$data[[1]] %>%
+    group_by(fill) %>%
+    mutate(cbi = ifelse(fill == "#00BFC4", 1, 2),
+           severity = ifelse(fill == "#00BFC4", "low severity", "high severity")) %>%
+    ungroup() %>%
+    left_join(means) %>%
+    mutate(status = ifelse(x < mean, "low biodiv value", "high biodiv value")) %>%
+    mutate(plot_group = paste(severity, status))
+
+  pal <- list(`low severity low biodiv value` = "#fee48e", `low severity high biodiv value` = "#e1ad01",
+              `high severity low biodiv value` = "#f4afae", `high severity high biodiv value` = "#bd1b19")
+  pal_line <- list(`1` = "#e1ad01", `2` =  "#bd1b19" )
+
+  df_breaks %>%
+    ggplot() +
+    geom_area(
+      aes(x = x, y = density, fill = plot_group), position = "identity", alpha = 0.60, color = "black"
+    ) +
+    scale_fill_manual(values = pal) +
+    guides(fill=guide_legend(title=element_blank())) +
+    theme_classic() +
+    xlab(metric_col) +
+    theme(axis.line.y=element_blank(),
+          axis.text.y=element_blank(),axis.ticks.y=element_blank(),
+          axis.title.y=element_blank()) +
+    geom_vline(aes(xintercept = mean, color = as.factor(cbi))) +
+    scale_color_manual(values = pal_line, guide = "none")
+}
+
+plot_metric_density("breeding_lcbd")
+
+metric_names <- colnames(metric_stack_df)[!colnames(metric_stack_df) %in% c("x", "y", "cbi")]
+
+map(metric_names,plot_metric_density)
+
+plot_ridglines <- function(metric_col){
+  col = sym(metric_col)
+
+  ## ridgline plot approach
+  metric_stack_df %>%
+    filter(cbi == 2) %>%
+    ggplot(aes(x = !!col, y = ecoregion, fill = stat(quantile))) +
+    stat_density_ridges(quantile_lines = TRUE,
+                        calc_ecdf = TRUE,
+                        geom = "density_ridges_gradient",
+                        quantiles = c(0.95)) +
+    scale_fill_manual(name = "Prob.", values = c("#f4afae", "#bd1b19"),
+                      labels = c("low biodiversity", "area of concern")) +
+    theme_classic()
+
+
+  metric_stack_df %>%
+    filter(cbi == 1) %>%
+    ggplot(aes(x = !!col, y = ecoregion, fill = stat(quantile))) +
+    stat_density_ridges(quantile_lines = TRUE,
+                        calc_ecdf = TRUE,
+                        geom = "density_ridges_gradient",
+                        quantiles = c(0.95)) +
+    scale_fill_manual(name = "Prob.", values = c("#fee48e", "#e1ad01"),
+                      labels = c("low biodiversity", "refugia")) +
+    theme_classic()
+}
+
+map(metric_names[metric_names != ecoregion], plot_ridglines)
+
+
+# can we manually change the fill when we have a grouped ridgeline plot
+# doesn't work because it's not expecting the aesthetic to change
+# grouped_ridgeline <- metric_stack_df %>%
+#   filter(cbi %in% c(1,2)) %>%
+#   ggplot(aes(x = breeding_richness, y = ecoregion, fill = as.factor(cbi))) +
+#   geom_density_ridges(quantile_lines = TRUE, alpha = 0.75,
+#                       calc_ecdf = TRUE,
+#                       #geom = "density_ridges_gradient",
+#                       quantiles = c(0.95)) +
+#   theme_classic() +
+#   ylab(element_blank()) +
+#   guides(fill = guide_legend(title = "Fire Severity"))
+#
+# plot_parts <- ggplot_build(grouped_ridgeline)
+#
+# plt_data <- plot_parts$data[[1]] %>%
+#   mutate(fill = case_when(
+#   fill == "#F8766D" & quantile == 1 ~ "#fee48e",
+#   fill == "#F8766D" & quantile == 2 ~ "#e1ad01",
+#   fill == "#00BFC4" & quantile == 1 ~ "#f4afae",
+#   fill == "#00BFC4" & quantile == 2 ~ "#bd1b19"
+# ))
+#
+# plot_parts$data[[1]] <- plt_data
+#
+# ggplot_gtable(plot_parts)
+
+
+# let's just got overlapping ridgeline plots, without the shaded upper region
+
+plot_grouped_ridgelines <- function(metric_col){
+  col = sym(metric_col)
+
+  grouped_ridgeline <- metric_stack_df %>%
+    filter(cbi %in% c(1,2)) %>%
+    ggplot(aes(x = !!col, y = ecoregion, fill = factor(cbi, levels = c("2", "1")))) +
+    geom_density_ridges(quantile_lines = TRUE, alpha = 0.75,
+                        calc_ecdf = TRUE,
+                        #geom = "density_ridges_gradient",
+                        quantiles = c(0.95)) +
+    theme_classic() +
+    ylab(element_blank()) +
+    guides(fill = guide_legend(title = "Fire Severity")) +
+    scale_fill_manual(values = list(`1` = "#e1ad01", `2` = "#bd1b19"),
+                      labels = c("low", "high"))
+}
+
+map(metric_names, plot_grouped_ridgelines)
+

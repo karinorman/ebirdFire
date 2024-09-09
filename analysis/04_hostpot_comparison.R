@@ -112,7 +112,9 @@ ggsave(here::here("figures/hotspot_maps_small_legend.jpg"), hotspot_plot, width 
 # we want the area relative to that in the CBI extent
 # this is NOT RIGHT for the non-ecoregion hotspots, since those quantiles were calculated relative
 # to the whole study extent, not just CBI, so only use the ecoregion overlap!
-area <-  map(hotspot_poly, ~crop(.x, cbi)) %>%
+boundary <- vect(here::here("data/study_boundary.shp"))
+
+area <-  map(hotspot_poly, ~crop(.x, boundary)) %>%
   map(., expanse) %>%
   as.data.frame() %>%
   pivot_longer(everything(), names_to = "metric", values_to = "hotspot_area")
@@ -130,94 +132,3 @@ overlap_df <- full_join(area, lowsev_int) %>%
   mutate(percent_lowsev = (lowsev_intersect/hotspot_area)*100, percent_highsev = (highsev_intersect/hotspot_area)*100)
 
 usethis::use_data(overlap_df)
-
-
-#### Quadrants of Concern ####
-metric_stack <- c(metric_rast, fd_rast, cbi) %>%
-  select(cbi = predict.high.severity.fire.draft, breeding_lcbd, nonbreeding_lcbd, breeding_richness, nonbreeding_richness,
-         FRic_breeding, FEve_breeding, FDiv_breeding,
-         FRic_nonbreeding, FEve_nonbreeding, FDiv_nonbreeding)
-
-metric_stack_df <- as.data.frame(metric_stack, xy = TRUE)
-#
-# density_plt <- metric_stack_df %>%
-#   filter(cbi %in% c(1,2)) %>%
-#   ggplot(aes(x = breeding_lcbd, fill = as.factor(cbi))) +
-#   geom_density(alpha = 0.25) +
-#   theme_classic()
-#
-# build <- ggplot2::ggplot_build(density_plt)
-#
-# df_breaks <- build$data[[1]] %>%
-#   group_by(fill) %>%
-#   mutate(mean_val = mean(x),
-#          severity = ifelse(fill == "#00BFC4", "low severity", "high severity"),
-#          status = ifelse(x < mean_val, "low lcbd", "high lcbd")) %>%
-#   ungroup() %>%
-#   mutate(plot_group = paste(severity, status))
-#
-# pal <- list(`low severity low lcbd` = "#c9d5c5", `low severity high lcbd` = "#77976e",
-#             `high severity low lcbd` = "#fee48e", `high severity high lcbd` = "#e1ad01")
-# df_breaks %>%
-#   ggplot() +
-#   geom_area(
-#     aes(x = x, y = y, fill = plot_group)
-#   ) +
-#   scale_fill_manual(values = pal) +
-#   guides(fill=guide_legend(title=element_blank())) +
-#   theme_classic() +
-#   xlab("Breeding LCBD") +
-#   theme(axis.line.y=element_blank(),
-#         axis.text.y=element_blank(),axis.ticks.y=element_blank(),
-#         axis.title.y=element_blank())
-
-
-plot_metric_density <- function(metric_col){
-  col = sym(metric_col)
-
-  means <-metric_stack_df %>%
-    filter(cbi %in% c(1,2)) %>%
-    group_by(cbi) %>%
-    summarize(mean = mean(!!col))
-
-  hold_plt <- metric_stack_df %>%
-    filter(cbi %in% c(1,2)) %>%
-    ggplot(aes(x = !!col, fill = as.factor(cbi))) +
-    geom_density(alpha = 0.25)
-
-  build <- ggplot2::ggplot_build(hold_plt)
-
-  df_breaks <- build$data[[1]] %>%
-    group_by(fill) %>%
-    mutate(cbi = ifelse(fill == "#00BFC4", 1, 2),
-           severity = ifelse(fill == "#00BFC4", "low severity", "high severity")) %>%
-    ungroup() %>%
-    left_join(means) %>%
-    mutate(status = ifelse(x < mean, "low biodiv value", "high biodiv value")) %>%
-    mutate(plot_group = paste(severity, status))
-
-  pal <- list(`low severity low biodiv value` = "#fee48e", `low severity high biodiv value` = "#e1ad01",
-              `high severity low biodiv value` = "#f4afae", `high severity high biodiv value` = "#bd1b19")
-  pal_line <- list(`1` = "#e1ad01", `2` =  "#bd1b19" )
-
-  df_breaks %>%
-    ggplot() +
-    geom_area(
-      aes(x = x, y = density, fill = plot_group), position = "identity", alpha = 0.60, color = "black"
-    ) +
-    scale_fill_manual(values = pal) +
-    guides(fill=guide_legend(title=element_blank())) +
-    theme_classic() +
-    xlab(metric_col) +
-    theme(axis.line.y=element_blank(),
-          axis.text.y=element_blank(),axis.ticks.y=element_blank(),
-          axis.title.y=element_blank()) +
-    geom_vline(aes(xintercept = mean, color = as.factor(cbi))) +
-    scale_color_manual(values = pal_line, guide = "none")
-}
-
-plot_metric_density("breeding_lcbd")
-
-metric_names <- colnames(metric_stack_df)[!colnames(metric_stack_df) %in% c("x", "y", "cbi")]
-
-map(metric_names,plot_metric_density)
