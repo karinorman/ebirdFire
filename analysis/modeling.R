@@ -24,7 +24,7 @@ morphology_fit <- betareg(high_sev_percent ~ Beak.Length_Culmen + Beak.Depth + T
                             Kipps.Distance + Secondary1 + Hand.Wing.Index + Tail.Length + log(Mass),
                           data = traits_df, link = "logit")
 
-mass_fit <- betareg(high_sev_percent ~ log(Mass), data = traits_df, link = "logit")
+#mass_fit <- betareg(high_sev_percent ~ log(Mass), data = traits_df, link = "logit")
 
 habitat_fit <- betareg(high_sev_percent ~ Habitat.Density + Habitat, data = traits_df, link = "logit")
 habitat_contrasts <- emmeans(habitat_fit, pairwise ~ Habitat, data = traits_df)$contrasts %>% as.data.frame()
