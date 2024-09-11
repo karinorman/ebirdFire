@@ -366,5 +366,67 @@ plot_grouped_ridgelines <- function(metric_col){
                       labels = c("low", "high"))
 }
 
-map(metric_names, plot_grouped_ridgelines)
+map(metric_names[metric_names != ecoregion], plot_grouped_ridgelines)
 
+
+## Plots with custom palette
+pal <- list(`Canadian Rocky Mountains 2` = "#CC6677", `Canadian Rocky Mountains 1` = "#ebc2c9",
+            `Middle Rockies - Blue Mountains 1` = "#c6beef", `Middle Rockies - Blue Mountains 2` = "#332288",
+            `Utah-Wyoming Rocky Mountains 1` = "#3ee375", `Utah-Wyoming Rocky Mountains 2` = "#117733",
+            `Southern Rocky Mountains 1` = "#d2ecf9", `Southern Rocky Mountains 2` = "#88CCEE",
+            `Utah High Plateaus 1` = "#db6fa5", `Utah High Plateaus 2` = "#882255",
+            `Colorado Plateau 1` = "#b7e2db", `Colorado Plateau 2` = "#44AA99",
+            `Arizona-New Mexico Mountains 1` = "#e3e3aa", `Arizona-New Mexico Mountains 2` = "#999933",
+            `Apache Highlands 1` = "#e9c9e4", `Apache Highlands 2` = "#AA4499")
+
+levels_order <- c("Canadian Rocky Mountains 2","Canadian Rocky Mountains 1",
+                  "Middle Rockies - Blue Mountains 2","Middle Rockies - Blue Mountains 1",
+                  "Utah-Wyoming Rocky Mountains 2", "Utah-Wyoming Rocky Mountains 1",
+                  "Southern Rocky Mountains 2", "Southern Rocky Mountains 1",
+                  "Utah High Plateaus 2", "Utah High Plateaus 1",
+                  "Colorado Plateau 2", "Colorado Plateau 1",
+                  "Arizona-New Mexico Mountains 2" ,"Arizona-New Mexico Mountains 1",
+                  "Apache Highlands 2", "Apache Highlands 1")
+
+# Example with colors by ecoregion with shaded tails
+metric_stack_df %>%
+  filter(cbi %in% c(1, 2)) %>%
+  mutate(fill_var = paste(ecoregion, cbi)) %>%
+  filter(cbi %in% c(1,2)) %>%
+  ggplot(aes(x = breeding_lcbd, y = ecoregion, fill = factor(fill_var, levels = levels_order))) +
+  geom_density_ridges(quantile_lines = TRUE, alpha = 0.75,
+                      calc_ecdf = TRUE,
+                      #geom = "density_ridges_gradient",
+                      quantiles = c(0.95)) +
+  theme_classic() +
+  ylab(element_blank()) +
+  scale_fill_manual(values = pal, guide = "none") +
+  new_scale_fill() +
+  stat_density_ridges(aes(fill = stat(quantile)), quantile_lines = TRUE,
+                      calc_ecdf = TRUE,
+                      geom = "density_ridges_gradient",
+                      quantiles = c(0.95)) +
+  scale_fill_manual(name = "Prob.",
+                    values = c("#BD1B1900", "#DDDDDDBF"),
+                    labels = c("low biodiversity", "area of concern"),
+                    guide = "none")
+
+### Plot Map
+ecoregions <- vect(here::here("raw_data/ecoregions/ecoregions_edc.shp")) %>%
+  project("epsg:4326")
+
+inc_ecoregion <- metric_stack_df %>%
+  filter(cbi %in% c(1, 2)) %>%
+  pull(ecoregion) %>% unique()
+
+ggplot() +
+  geom_spatvector(data = US_boundary, color = "black", fill = "transparent", alpha = 0.5) +
+  geom_spatvector(data = ecoregions %>% filter(ECO_NAME %in% inc_ecoregion),
+                  aes(fill = factor(ECO_NAME, levels = c("Canadian Rocky Mountains", "Middle Rockies - Blue Mountains",
+                                                         "Utah-Wyoming Rocky Mountains", "Southern Rocky Mountains",
+                                                         "Utah High Plateaus", "Colorado Plateau",
+                                                         "Arizona-New Mexico Mountains", "Apache Highlands"))), color = "black", linewidth = 0.4) %>%
+  scale_fill_manual(values = list(`Canadian Rocky Mountains` = "#CC6677", `Middle Rockies - Blue Mountains` = "#332288",
+                                  `Utah-Wyoming Rocky Mountains` = "#117733", `Southern Rocky Mountains` = "#88CCEE",
+                                  `Utah High Plateaus` = "#882255", `Colorado Plateau` = "#44AA99", `Arizona-New Mexico Mountains` = "#999933",
+                                  `Apache Highlands` = "#AA4499"), drop = F)
