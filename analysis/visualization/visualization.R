@@ -410,15 +410,15 @@ pmap(xlab_df, function(metric_col, xlab){
     theme_classic() +
     ylab(element_blank()) +
     scale_fill_manual(values = pal, guide = "none") +
-    new_scale_fill() +
-    stat_density_ridges(aes(fill = stat(quantile)), quantile_lines = TRUE,
-                        calc_ecdf = TRUE,
-                        geom = "density_ridges_gradient",
-                        quantiles = c(0.95)) +
-    scale_fill_manual(name = "Prob.",
-                      values = c("#BD1B1900", "#DDDDDDBF"),
-                      labels = c("low biodiversity", "area of concern"),
-                      guide = "none") +
+    # new_scale_fill() +
+    # stat_density_ridges(aes(fill = stat(quantile)), quantile_lines = TRUE,
+    #                     calc_ecdf = TRUE,
+    #                     geom = "density_ridges_gradient",
+    #                     quantiles = c(0.95)) +
+    # scale_fill_manual(name = "Prob.",
+    #                   values = c("#BD1B1900", "#DDDDDDBF"),
+    #                   labels = c("low biodiversity", "area of concern"),
+    #                   guide = "none") +
     xlab(xlab)
 })
 
