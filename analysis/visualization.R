@@ -5,7 +5,8 @@ library(ggnewscale)
 library(viridis)
 library(scales)
 library(cowplot)
-
+library(purrr)
+library(ggridges)
 
 # maps of metrics for Western US
 richness_rast <- rast(here::here("data/richness_rast.tif"))
@@ -316,7 +317,7 @@ plot_ridglines <- function(metric_col){
     theme_classic()
 }
 
-map(metric_names[metric_names != ecoregion], plot_ridglines)
+map(metric_names[metric_names != "ecoregion"], plot_ridglines)
 
 
 # can we manually change the fill when we have a grouped ridgeline plot
@@ -347,8 +348,8 @@ map(metric_names[metric_names != ecoregion], plot_ridglines)
 # ggplot_gtable(plot_parts)
 
 
-# let's just got overlapping ridgeline plots, without the shaded upper region
-
+# let's just got overlapping ridgeline plots, without the shaded upper region but with
+# the quantile line
 plot_grouped_ridgelines <- function(metric_col){
   col = sym(metric_col)
 
@@ -366,7 +367,7 @@ plot_grouped_ridgelines <- function(metric_col){
                       labels = c("low", "high"))
 }
 
-map(metric_names[metric_names != ecoregion], plot_grouped_ridgelines)
+map(metric_names[metric_names != "ecoregion"], plot_grouped_ridgelines)
 
 
 ## Plots with custom palette
@@ -389,27 +390,37 @@ levels_order <- c("Canadian Rocky Mountains 2","Canadian Rocky Mountains 1",
                   "Apache Highlands 2", "Apache Highlands 1")
 
 # Example with colors by ecoregion with shaded tails
-metric_stack_df %>%
-  filter(cbi %in% c(1, 2)) %>%
-  mutate(fill_var = paste(ecoregion, cbi)) %>%
-  filter(cbi %in% c(1,2)) %>%
-  ggplot(aes(x = breeding_lcbd, y = ecoregion, fill = factor(fill_var, levels = levels_order))) +
-  geom_density_ridges(quantile_lines = TRUE, alpha = 0.75,
-                      calc_ecdf = TRUE,
-                      #geom = "density_ridges_gradient",
-                      quantiles = c(0.95)) +
-  theme_classic() +
-  ylab(element_blank()) +
-  scale_fill_manual(values = pal, guide = "none") +
-  new_scale_fill() +
-  stat_density_ridges(aes(fill = stat(quantile)), quantile_lines = TRUE,
-                      calc_ecdf = TRUE,
-                      geom = "density_ridges_gradient",
-                      quantiles = c(0.95)) +
-  scale_fill_manual(name = "Prob.",
-                    values = c("#BD1B1900", "#DDDDDDBF"),
-                    labels = c("low biodiversity", "area of concern"),
-                    guide = "none")
+xlab_df <- data.frame(metric_col = metric_names[metric_names != "ecoregion"],
+                      xlab = c("Breeding LCBD", "Nonbreeding LCBD", "Breeding Richness", "Nonbreeding Richness",
+                        "Breeding Functional Richness", "Breeding Functional Evenness", "Breeding Functional Divergence",
+                        "Nonbreeding Functional Richness", "Nonbreeding Functional Evenness", "Nonbreeding Functional Divergence"))
+
+pmap(xlab_df, function(metric_col, xlab){
+  col = sym(metric_col)
+
+  metric_stack_df %>%
+    filter(cbi %in% c(1, 2)) %>%
+    mutate(fill_var = paste(ecoregion, cbi)) %>%
+    filter(cbi %in% c(1,2)) %>%
+    ggplot(aes(x = !!col, y = ecoregion, fill = factor(fill_var, levels = levels_order))) +
+    geom_density_ridges(quantile_lines = TRUE, alpha = 0.75,
+                        calc_ecdf = TRUE,
+                        #geom = "density_ridges_gradient",
+                        quantiles = c(0.95)) +
+    theme_classic() +
+    ylab(element_blank()) +
+    scale_fill_manual(values = pal, guide = "none") +
+    new_scale_fill() +
+    stat_density_ridges(aes(fill = stat(quantile)), quantile_lines = TRUE,
+                        calc_ecdf = TRUE,
+                        geom = "density_ridges_gradient",
+                        quantiles = c(0.95)) +
+    scale_fill_manual(name = "Prob.",
+                      values = c("#BD1B1900", "#DDDDDDBF"),
+                      labels = c("low biodiversity", "area of concern"),
+                      guide = "none") +
+    xlab(xlab)
+})
 
 ### Plot Map
 ecoregions <- vect(here::here("raw_data/ecoregions/ecoregions_edc.shp")) %>%
@@ -422,11 +433,10 @@ inc_ecoregion <- metric_stack_df %>%
 ggplot() +
   geom_spatvector(data = US_boundary, color = "black", fill = "transparent", alpha = 0.5) +
   geom_spatvector(data = ecoregions %>% filter(ECO_NAME %in% inc_ecoregion),
-                  aes(fill = factor(ECO_NAME, levels = c("Canadian Rocky Mountains", "Middle Rockies - Blue Mountains",
-                                                         "Utah-Wyoming Rocky Mountains", "Southern Rocky Mountains",
-                                                         "Utah High Plateaus", "Colorado Plateau",
-                                                         "Arizona-New Mexico Mountains", "Apache Highlands"))), color = "black", linewidth = 0.4) %>%
+                  aes(fill = factor(ECO_NAME)),
+                  color = "black", linewidth = 0.4) +
   scale_fill_manual(values = list(`Canadian Rocky Mountains` = "#CC6677", `Middle Rockies - Blue Mountains` = "#332288",
                                   `Utah-Wyoming Rocky Mountains` = "#117733", `Southern Rocky Mountains` = "#88CCEE",
                                   `Utah High Plateaus` = "#882255", `Colorado Plateau` = "#44AA99", `Arizona-New Mexico Mountains` = "#999933",
-                                  `Apache Highlands` = "#AA4499"), drop = F)
+                                  `Apache Highlands` = "#AA4499"), drop = F, name = NULL) +
+  theme_void()
