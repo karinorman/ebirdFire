@@ -23,23 +23,59 @@ ecoregions <- terra::vect(here::here("raw_data/ecoregions/ecoregions_edc.shp")) 
   project("epsg:4326")
 
 # let's visualize it
-richness_plot <- ggplot() +
-  geom_spatraster(data = metric_rast %>% select(breeding_richness, nonbreeding_richness)) +
+# richness_plot <- ggplot() +
+#   geom_spatraster(data = metric_rast %>% select(breeding_richness, nonbreeding_richness)) +
+#   scale_fill_continuous(type = "viridis", na.value = "transparent", name = "species richness") +
+#   #geom_spatvector(data = boundary, fill = "transparent") +
+#   facet_wrap(~lyr, labeller = as_labeller(c(`breeding_richness` = "breeding",
+#                                             `nonbreeding_richness` = "nonbreeding"))) +
+#   theme_void()
+#
+# lcbd_plot <- ggplot() +
+#   geom_spatraster(data = metric_rast %>% select(breeding_lcbd, nonbreeding_lcbd)) +
+#   scale_fill_continuous(type = "viridis", na.value = "transparent", name = "lcbd") +
+#   #geom_spatvector(data = boundary, fill = "transparent") +
+#   facet_wrap(~lyr, labeller = as_labeller(c(`breeding_lcbd` = "",
+#                                             `nonbreeding_lcbd` = ""))) +
+#   theme_void()
+#
+# wus_metric_plot <- plot_grid(richness_plot, lcbd_plot, nrow = 2)
+
+
+plot_metric_map <- function(data, metric_col){
+
+  col = sym(metric_col)
+breeding_richness_plot <- ggplot() +
+  geom_spatraster(data = data %>% select(!!col),
+                  maxcell = 1000e+05) +
   scale_fill_continuous(type = "viridis", na.value = "transparent", name = "species richness") +
   #geom_spatvector(data = boundary, fill = "transparent") +
-  facet_wrap(~lyr, labeller = as_labeller(c(`breeding_richness` = "breeding",
-                                            `nonbreeding_richness` = "nonbreeding"))) +
-  theme_void()
+  theme_void() +
+  theme(legend.title=element_blank(),
+        panel.background = element_rect(fill = "transparent",
+                                        colour = NA_character_), # necessary to avoid drawing panel outline
+        panel.grid.major = element_blank(), # get rid of major grid
+        panel.grid.minor = element_blank(), # get rid of minor grid
+        plot.background = element_rect(fill = "transparent",
+                                       colour = NA_character_), # necessary to avoid drawing plot outline
+        legend.background = element_rect(fill = NA, color = NA),
+        legend.box.background = element_rect(fill = NA, color = NA),
+        legend.key = element_rect(fill = "transparent"),
+        legend.box = element_blank()
+        )
+}
 
-lcbd_plot <- ggplot() +
-  geom_spatraster(data = metric_rast %>% select(breeding_lcbd, nonbreeding_lcbd)) +
-  scale_fill_continuous(type = "viridis", na.value = "transparent", name = "lcbd") +
-  #geom_spatvector(data = boundary, fill = "transparent") +
-  facet_wrap(~lyr, labeller = as_labeller(c(`breeding_lcbd` = "",
-                                            `nonbreeding_lcbd` = ""))) +
-  theme_void()
+breeding_richness_plot <- plot_metric_map(metric_rast, "breeding_richness")
+ggsave(here::here("figures/wus_bredding_richness_map.png"), breeding_richness_plot, bg = "transparent")
 
-wus_metric_plot <- plot_grid(richness_plot, lcbd_plot, nrow = 2)
+breeding_lcbd_plot <- plot_metric_map(metric_rast, "breeding_lcbd")
+ggsave(here::here("figures/wus_breeding_lcbd_map.png"), breeding_lcbd_plot, bg = "transparent")
+
+ecoreg_breeding_lcbd_plot <- plot_metric_map(metric_rast, "ecoregion_breeding_lcbd")
+ggsave(here::here("figures/wus_ecoreg_breedgin_lcbd_map.png"), ecoreg_breeding_lcbd_plot, bg = "transparent")
+
+breeding_fric_plot <- plot_metric_map(fd_rast, "FRic_breeding")
+ggsave(here::here("figures/wus_breeding_fric_map.png"), breeding_fric_plot, bg = "transparent")
 
 ggsave(here::here("figures/wus_metrics_map.jpg"), wus_metric_plot, width = 10, height = 10)
 
