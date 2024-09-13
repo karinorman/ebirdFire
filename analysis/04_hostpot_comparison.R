@@ -13,6 +13,7 @@ cbi <- rast(here::here("raw_data/predict.high.severity.fire.draft.tif"))
 metric_rast <- rast(here::here("data/metric_rast.tiff"))
 fd_rast <- rast(here::here("data/fd_rast.tiff"))
 
+## FIXME: should this be cropped to the included ecoregions?
 # get raster of hotspots for non-ecoregion layers
 hotspot_rast <- c(metric_rast, fd_rast) %>%
   select(breeding_lcbd, nonbreeding_lcbd, breeding_richness, nonbreeding_richness,
@@ -41,6 +42,8 @@ hotspot_poly <- c(map(1:length(names(hotspot_rast)), ~as.polygons(hotspot_rast[[
                   map(1:length(names(ecoregion_fd_hotspot_rast)), ~as.polygons(ecoregion_fd_hotspot_rast[[.x]])))
 
 names(hotspot_poly) <- c(names(hotspot_rast), names(ecoregion_hotspot_rast), names(ecoregion_fd_hotspot_rast))
+
+writeVector(vect(hotspot_poly), here::here("data/hotspots.shp"))
 
 # Let's get polygons for low and high severity fire
 low_sev <- cbi %>% filter(predict.high.severity.fire.draft == 1) %>%

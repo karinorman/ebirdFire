@@ -41,6 +41,9 @@ ecoregions <- terra::vect(here::here("raw_data/ecoregions/ecoregions_edc.shp")) 
 #
 # wus_metric_plot <- plot_grid(richness_plot, lcbd_plot, nrow = 2)
 
+#################################
+######### metric map ############
+#################################
 
 plot_metric_map <- function(data, metric_col){
 
@@ -49,7 +52,7 @@ breeding_richness_plot <- ggplot() +
   geom_spatraster(data = data %>% select(!!col),
                   maxcell = 1000e+05) +
   scale_fill_continuous(type = "viridis", na.value = "transparent", name = "species richness") +
-  #geom_spatvector(data = boundary, fill = "transparent") +
+  geom_spatvector(data = boundary, fill = "transparent", colour = "black") +
   theme_void() +
   theme(legend.title=element_blank(),
         panel.background = element_rect(fill = "transparent",
@@ -213,16 +216,98 @@ plot_ecoregions <- c("Canadian Rocky Mountains", "Middle Rockies - Blue Mountain
                      "Utah High Plateaus", "Colorado Plateau", "Apache Highlands", "Arizona-New Mexico Mountains")
 
 bivar <- ggplot() +
-  geom_spatvector(data = US_boundary, color = "black", fill = "transparent", alpha = 0.5) +
+  geom_spatvector(data = US_boundary, color = "black", fill = "white", alpha = 0.5) +
   geom_spatvector(data = ecoregions %>% filter(ECO_NAME %in% plot_ecoregions) %>% terra::aggregate(), color = "black", fill = "white", linewidth = 0.4) +
   #geom_spatvector(data = ecoregions %>% terra::aggregate(), color = "black", fill = "transparent", linetype = "dotted", linewidth = .4) +
   geom_spatraster(data = quant_rast, maxcell = 2500000) +
   scale_fill_discrete(type = color_assign, na.value = "transparent", name = "species richness", guide = "none") +
-  theme_void()
+  theme_void() +
+  theme(panel.background = element_rect(fill = "transparent",
+                                        colour = NA_character_), # necessary to avoid drawing panel outline
+        panel.grid.major = element_blank(), # get rid of major grid
+        panel.grid.minor = element_blank(), # get rid of minor grid
+        plot.background = element_rect(fill = "transparent",
+                                       colour = NA_character_), # necessary to avoid drawing plot outline
+        legend.background = element_rect(fill = NA, color = NA),
+        legend.box.background = element_rect(fill = NA, color = NA),
+        legend.key = element_rect(fill = "transparent"),
+        legend.box = element_blank()
+  )
+
 
 richness_cbi_bivar <- ggdraw() +
   draw_plot(bivar, 0, 0, 1, 1) +
   draw_plot(legend, 0.25, 0.4, 0.2, 0.2)
 
-ggsave(here::here("figures/richness_cbi_bivar.jpg"), richness_cbi_bivar, width = 10, height = 10)
+ggsave(here::here("figures/richness_cbi_bivar.png"), richness_cbi_bivar, width = 10, height = 10, bg = "transparent")
+
+#################################
+########## CBI map ##############
+#################################
+
+# Plot of just CBI
+cbi_plot <- ggplot() +
+  geom_spatvector(data = US_boundary, color = "black", fill = "white") +
+  geom_spatraster(data = cbi %>%
+                    filter(predict.high.severity.fire.draft %in% c(1,2)) %>%
+                    mutate(predict.high.severity.fire.draft = as.factor(predict.high.severity.fire.draft))) +
+  scale_fill_manual(values = list(`1` = "#D3B073", `2` =  "#BC4749"), na.value = "transparent", na.translate = FALSE,
+                    labels = c("Low Severity", "High Severity")) +
+  theme_void() +
+  theme(legend.title = element_blank(),
+        panel.background = element_rect(fill = "transparent",
+                                        colour = NA_character_), # necessary to avoid drawing panel outline
+        panel.grid.major = element_blank(), # get rid of major grid
+        panel.grid.minor = element_blank(), # get rid of minor grid
+        plot.background = element_rect(fill = "transparent",
+                                       colour = NA_character_), # necessary to avoid drawing plot outline
+        legend.background = element_rect(fill = NA, color = NA),
+        legend.box.background = element_rect(fill = NA, color = NA),
+        legend.key = element_rect(fill = "transparent"),
+        legend.box = element_blank()
+  )
+
+ggsave(here::here("figures/cbi.png"), cbi_plot, width = 10, height = 10, bg = "transparent")
+
+#################################
+####### hotspot maps ###########
+#################################
+
+hotspot_poly <- vect(here::here("data/hotspots.shp"))
+
+plot_cbi <- cbi %>%
+  mutate(predict.high.severity.fire.draft =
+           as.factor(ifelse(predict.high.severity.fire.draft == 0, NA, predict.high.severity.fire.draft)))
+
+plot_refugia <- function(metric_col){
+ggplot() +
+  geom_spatvector(data = US_boundary, color = "black", fill = "white") +
+  geom_spatvector(data = as.polygons(cbi) %>% aggregate(), color = "#DDDDDDBF", alpha = 0.5) +
+  geom_spatraster(data = plot_cbi %>% crop(hotspot_poly[[metric_col]], mask = TRUE)) +
+  scale_fill_manual(values = list(`1` = "#82A6B1", `2` =  "#BC4749"), na.value = "#DDDDDDBF", na.translate = FALSE,
+                    labels = c("Refugia", "Areas of Concern")) +
+  theme_void() +
+  theme(legend.title = element_blank(),
+        panel.background = element_rect(fill = "transparent",
+                                        colour = NA_character_), # necessary to avoid drawing panel outline
+        panel.grid.major = element_blank(), # get rid of major grid
+        panel.grid.minor = element_blank(), # get rid of minor grid
+        plot.background = element_rect(fill = "transparent",
+                                       colour = NA_character_), # necessary to avoid drawing plot outline
+        legend.background = element_rect(fill = NA, color = NA),
+        legend.box.background = element_rect(fill = NA, color = NA),
+        legend.key = element_rect(fill = "transparent"),
+        legend.box = element_blank()
+  )
+}
+
+breeding_lcbd_refugia <- plot_refugia("ecoregion_breeding_lcbd")
+ggsave(here::here("figures/refugia_eco_breeding_lcbd.png", breeding_lcbd_refugia))
+
+breeding_richness_refugia <- plot_refugia("breeding_richness")
+ggsave(here::here("figures/refugia_breeding_richness.png"), breeding_richness_refugia)
+
+breeding_fric_refugia <- plot_refugia("FRic_breeding")
+ggsave(here::here("figures/refugia_breeding_fric.png"), breeding_fric_refugia)
+
 
