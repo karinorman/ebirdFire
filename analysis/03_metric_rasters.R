@@ -113,19 +113,21 @@ ecoregion_nonbreeding_lcbd <- nonbreeding_mat %>%
 ####################################
 breeding_richness <- breeding_mat %>%
   select(cell, ECO_NAME, everything()) %>%
-  filter(!is.na(ECO_NAME)) %>%
+  #filter(!is.na(ECO_NAME)) %>%
   mutate(breeding_richness = rowSums(across(3:last_col()))) %>%
   select(cell, ECO_NAME, breeding_richness) %>%
   group_by(ECO_NAME) %>%
-  mutate(breeding_quantile_cutoff = quantile(breeding_richness, probs = 0.95, na.rm = TRUE))
+  mutate(breeding_quantile_cutoff = quantile(breeding_richness, probs = 0.95, na.rm = TRUE)) %>%
+  ungroup()
 
 nonbreeding_richness <- nonbreeding_mat %>%
   select(cell, ECO_NAME, everything()) %>%
-  filter(!is.na(ECO_NAME)) %>%
+  #filter(!is.na(ECO_NAME)) %>%
   mutate(nonbreeding_richness = rowSums(across(3:last_col()))) %>%
   select(cell, ECO_NAME, nonbreeding_richness) %>%
   group_by(ECO_NAME) %>%
-  mutate(nonbreeding_quantile_cutoff = quantile(nonbreeding_richness, probs = 0.95, na.rm = TRUE))
+  mutate(nonbreeding_quantile_cutoff = quantile(nonbreeding_richness, probs = 0.95, na.rm = TRUE)) %>%
+  ungroup()
 
 # join, column for each metric
 metrics <- full_join(breeding_lcbd, nonbreeding_lcbd) %>%
