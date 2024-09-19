@@ -117,7 +117,7 @@ ggsave(here::here("figures/hotspot_maps_small_legend.jpg"), hotspot_plot, width 
 # to the whole study extent, not just CBI, so only use the ecoregion overlap!
 boundary <- vect(here::here("data/study_boundary.shp"))
 
-area <-  map(hotspot_poly, ~crop(.x, boundary)) %>%
+area <-  map(hotspot_poly, ~crop(.x, cbi)) %>%
   map(., expanse) %>%
   as.data.frame() %>%
   pivot_longer(everything(), names_to = "metric", values_to = "hotspot_area")
