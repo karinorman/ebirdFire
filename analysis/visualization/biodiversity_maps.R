@@ -40,6 +40,8 @@ ecoregions <- terra::vect(here::here("raw_data/ecoregions/ecoregions_edc.shp")) 
 #   theme_void()
 #
 # wus_metric_plot <- plot_grid(richness_plot, lcbd_plot, nrow = 2)
+#
+# ggsave(here::here("figures/wus_metrics_map.jpg"), wus_metric_plot, width = 10, height = 10)
 
 #################################
 ######### metric map ############
@@ -48,10 +50,10 @@ ecoregions <- terra::vect(here::here("raw_data/ecoregions/ecoregions_edc.shp")) 
 plot_metric_map <- function(data, metric_col){
 
   col = sym(metric_col)
-breeding_richness_plot <- ggplot() +
+  ggplot() +
   geom_spatraster(data = data %>% select(!!col),
                   maxcell = 1000e+05) +
-  scale_fill_continuous(type = "viridis", na.value = "transparent", name = "species richness") +
+  scale_fill_continuous(type = "viridis", na.value = "transparent") +
   geom_spatvector(data = boundary, fill = "transparent", colour = "black") +
   theme_void() +
   theme(legend.title=element_blank(),
@@ -79,8 +81,6 @@ ggsave(here::here("figures/wus_ecoreg_breedgin_lcbd_map.png"), ecoreg_breeding_l
 
 breeding_fric_plot <- plot_metric_map(fd_rast, "FRic_breeding")
 ggsave(here::here("figures/wus_breeding_fric_map.png"), breeding_fric_plot, bg = "transparent")
-
-ggsave(here::here("figures/wus_metrics_map.jpg"), wus_metric_plot, width = 10, height = 10)
 
 #################################
 ####### bivariate map ###########
@@ -248,6 +248,7 @@ ggsave(here::here("figures/richness_cbi_bivar.png"), richness_cbi_bivar, width =
 # Plot of just CBI
 cbi_plot <- ggplot() +
   geom_spatvector(data = US_boundary, color = "black", fill = "white") +
+  geom_spatvector(data = ecoregions %>% filter(ECO_NAME %in% plot_ecoregions) %>% terra::aggregate(), color = "black", fill = "white", linewidth = 0.4) +
   geom_spatraster(data = cbi %>%
                     filter(predict.high.severity.fire.draft %in% c(1,2)) %>%
                     mutate(predict.high.severity.fire.draft = as.factor(predict.high.severity.fire.draft))) +
@@ -310,4 +311,46 @@ ggsave(here::here("figures/refugia_breeding_richness.png"), breeding_richness_re
 breeding_fric_refugia <- plot_refugia("FRic_breeding")
 ggsave(here::here("figures/refugia_breeding_fric.png"), breeding_fric_refugia)
 
+#################################
+### metric + hotspot maps #######
+#################################
 
+plot_metric_hotspot_map <- function(data, metric_col){
+
+  col = sym(metric_col)
+
+  if(stringr::str_detect(metric_col, "ecoregion")){
+    poly_name = col
+  } else {poly_name = paste0("ecoregion_", metric_col)}
+
+
+  ggplot() +
+    geom_spatraster(data = data %>% select(!!col) %>% crop(., ecoregions, mask = TRUE),
+                    maxcell = 1000e+05) +
+    scale_fill_continuous(type = "viridis", na.value = "transparent") +
+    geom_spatvector(data = boundary, fill = "transparent", colour = "black") +
+    #geom_spatvector(data = ecoregions, fill = "transparent", colour = "white") +
+    geom_spatvector(data = hotspot_poly[[poly_name]] %>% crop(., ecoregions), fill = "#FDE725FF", color = "transparent") +
+    theme_void() +
+    theme(legend.title=element_blank(),
+          panel.background = element_rect(fill = "transparent",
+                                          colour = NA_character_), # necessary to avoid drawing panel outline
+          panel.grid.major = element_blank(), # get rid of major grid
+          panel.grid.minor = element_blank(), # get rid of minor grid
+          plot.background = element_rect(fill = "transparent",
+                                         colour = NA_character_), # necessary to avoid drawing plot outline
+          legend.background = element_rect(fill = NA, color = NA),
+          legend.box.background = element_rect(fill = NA, color = NA),
+          legend.key = element_rect(fill = "transparent"),
+          legend.box = element_blank()
+    )
+}
+
+breeding_richness_hotspot <- plot_metric_hotspot_map(metric_rast, "breeding_richness")
+ggsave(here::here("figures/breeding_richness_hotspot.png"), breeding_richness_hotspot)
+
+breeding_lcbd_hotspot <- plot_metric_hotspot_map(metric_rast, "ecoregion_breeding_lcbd")
+ggsave(here::here("figures/breeding_lcbd_hotspot.png"), breeding_lcbd_hotspot)
+
+breeding_fric_hotspot <- plot_metric_hotspot_map(fd_rast, "FRic_breeding")
+ggsave(here::here("figures/breeding_fric_hotspot.png"), breeding_fric_hotspot)
