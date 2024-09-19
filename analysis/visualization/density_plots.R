@@ -185,7 +185,10 @@ pmap(xlab_df, function(metric_col, xlab){
     #                   values = c("#BD1B1900", "#DDDDDDBF"),
     #                   labels = c("low biodiversity", "area of concern"),
     #                   guide = "none") +
-    xlab(xlab)
+    xlab(xlab) +
+    theme(text = element_text(size = 15))
+
+  ggsave(here::here("figures", paste0(metric_col, "density.png")))
 })
 
 ### Plot Map
@@ -203,7 +206,7 @@ inc_ecoregion <- metric_stack_df %>%
   filter(cbi %in% c(1, 2)) %>%
   pull(ecoregion) %>% unique()
 
-ggplot() +
+ecoregion_map <- ggplot() +
   geom_spatvector(data = US_boundary, color = "black", fill = "transparent", alpha = 0.5) +
   geom_spatvector(data = ecoregion_vect %>% filter(ECO_NAME %in% inc_ecoregion),
                   aes(fill = factor(ECO_NAME)),
@@ -213,3 +216,5 @@ ggplot() +
                                   `Utah High Plateaus` = "#882255", `Colorado Plateau` = "#44AA99", `Arizona-New Mexico Mountains` = "#999933",
                                   `Apache Highlands` = "#AA4499"), drop = F, name = NULL) +
   theme_void()
+
+ggsave(here::here("figures/ecoregion_map.png"), ecoregion_map)
