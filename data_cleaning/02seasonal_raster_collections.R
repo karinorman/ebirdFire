@@ -18,12 +18,21 @@ US_boundary <- rnaturalearth::ne_states(iso_a2 = "US") %>%
   crop(ext(c(-130, -105.5, 18, 50))) %>%
   aggregate()
 
+# cbi is clipped to the easter border of Montana and Wyoming, so need to remove that section from the ecoregions
+cbi_boundary <- rnaturalearth::ne_states(iso_a2 = "US") %>%
+  vect() %>%
+  project("epsg:4326") %>%
+  filter(name %in% c("Washington", "Oregon", "California", "Idaho", "Nevada",
+                     "Montana", "Arizona", "Utah", "Wyoming", "Texas", "Colorado", "New Mexico",
+                     "Kansas", "Oklahoma"))
+
 # ecoregions for wester boundary
 ecoregions <- terra::vect(here::here("raw_data/ecoregions/ecoregions_edc.shp")) %>%
   project("epsg:4326") %>%
   filter(ECO_NAME %in% c("Northern Great Plains Steppe", "Southern Rocky Mountains",
                          "Arizona-New Mexico Mountains", "Apache Highlands")) %>%
-  aggregate()
+  aggregate() %>%
+  crop(cbi_boundary)
 
 boundary <- rbind(US_boundary, ecoregions) %>%
   aggregate() %>%

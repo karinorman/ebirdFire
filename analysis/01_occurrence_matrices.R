@@ -4,8 +4,6 @@ library(purrr)
 library(tidyr)
 library(tidyterra)
 
-boundary_shp <- vect(here::here("data/study_boundary.shp"))
-
 #### get list of files for each species type ####
 
 # residents
