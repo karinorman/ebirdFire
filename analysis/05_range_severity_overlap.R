@@ -5,7 +5,7 @@ library(purrr)
 library(ggplot2)
 library(cowplot)
 
-cbi <- rast(here::here("raw_data/predict.high.severity.fire.draft.tif"))
+cbi <- rast(here::here("data/cbi.tif"))
 
 high_sev <- cbi %>% filter(predict.high.severity.fire.draft == 2) %>%
   as.polygons()

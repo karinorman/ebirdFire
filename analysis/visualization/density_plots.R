@@ -16,7 +16,7 @@ library(ggplot2)
 metric_rast <- rast(here::here("data/metric_rast.tiff"))
 fd_rast <- rast(here::here("data/fd_rast.tiff"))
 
-cbi <- rast(here::here("raw_data/predict.high.severity.fire.draft.tif"))
+cbi <- rast(here::here("data/cbi.tif"))
 
 #### Quadrants of Concern ####
 ecoregion_rast <- vect(here::here("raw_data/ecoregions/ecoregions_edc.shp")) %>%

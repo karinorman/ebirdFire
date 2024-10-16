@@ -15,7 +15,7 @@ library(ggridges)
 metric_rast <- rast(here::here("data/metric_rast.tiff"))
 fd_rast <- rast(here::here("data/fd_rast.tiff"))
 
-cbi <- rast(here::here("raw_data/predict.high.severity.fire.draft.tif"))
+cbi <- rast(here::here("data/cbi.tif"))
 
 boundary <- terra::vect(here::here("data/study_boundary.shp"))
 
