@@ -5,19 +5,7 @@ library(purrr)
 library(ggplot2)
 library(cowplot)
 
-# get a US boundary base map
-US_boundary_states <- rnaturalearth::ne_states(iso_a2 = "US") %>%
-  vect() %>%
-  project("epsg:4326") %>%
-  filter(name %in% c("Washington", "Oregon", "California", "Idaho", "Nevada",
-                     "Montana", "Arizona", "Utah", "Wyoming", "Texas", "Colorado", "New Mexico",
-                     "Kansas", "Oklahoma")) %>%
-  crop(ext(c(-130, -98, 18, 50)))
-
-US_boundary <- US_boundary_states %>% aggregate()
-
-cbi <- rast(here::here("raw_data/predict.high.severity.fire.final.tif")) %>%
-  crop(US_boundary, mask = TRUE)
+cbi <- rast(here::here("data/cbi.tif"))
 
 metric_rast <- rast(here::here("data/metric_rast.tiff"))
 fd_rast <- rast(here::here("data/fd_rast.tiff"))
@@ -78,6 +66,17 @@ limits <- map(names(metrics), ~if (stringr::str_detect(.x, "lcbd")) c(0,1) else 
 
 # this should be true
 length(names(metrics)) == length(hotspot_poly)
+
+# get a US boundary base map
+US_boundary_states <- rnaturalearth::ne_states(iso_a2 = "US") %>%
+  vect() %>%
+  project("epsg:4326") %>%
+  filter(name %in% c("Washington", "Oregon", "California", "Idaho", "Nevada",
+                     "Montana", "Arizona", "Utah", "Wyoming", "Texas", "Colorado", "New Mexico",
+                     "Kansas", "Oklahoma")) %>%
+  crop(ext(c(-130, -98, 18, 50)))
+
+US_boundary <- US_boundary_states %>% aggregate()
 
 #this sort of works for visualization but the scales are way off
 hotspot_maps <- map(1:length(names(metrics)), ~ ggplot() +
