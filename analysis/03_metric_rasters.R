@@ -92,10 +92,10 @@ ecoregion_breeding_lcbd <- breeding_mat %>%
   group_map(~ julia_lcbd(.x %>% select(-ECO_NAME)) %>%
               mutate(ECO_NAME = unique(.x$ECO_NAME)), .keep = TRUE) %>%
   bind_rows() %>%
-  rename(ecoregion_breeding_lcbd = LCBD) %>%
-  # let's do quantile calculation for hotspots now while we've got the ecoregion labels
-  group_by(ECO_NAME) %>%
-  mutate(lcbd_breeding_quantile_cutoff = quantile(ecoregion_breeding_lcbd, probs = 0.95, na.rm = TRUE))
+  rename(ecoregion_breeding_lcbd = LCBD) #%>%
+  # # let's do quantile calculation for hotspots now while we've got the ecoregion labels
+  # group_by(ECO_NAME) %>%
+  # mutate(lcbd_breeding_quantile_cutoff = quantile(ecoregion_breeding_lcbd, probs = 0.95, na.rm = TRUE))
 
 ecoregion_nonbreeding_lcbd <- nonbreeding_mat %>%
   filter(!is.na(ECO_NAME)) %>%
@@ -103,10 +103,10 @@ ecoregion_nonbreeding_lcbd <- nonbreeding_mat %>%
   group_map(~ julia_lcbd(.x %>% select(-ECO_NAME)) %>%
               mutate(ECO_NAME = unique(.x$ECO_NAME)), .keep = TRUE) %>%
   bind_rows() %>%
-  rename(ecoregion_nonbreeding_lcbd = LCBD) %>%
-  # let's do quantile calculation for hotspots now while we've got the ecoregion labels
-  group_by(ECO_NAME) %>%
-  mutate(lcbd_nonbreeding_quantile_cutoff = quantile(ecoregion_nonbreeding_lcbd, probs = 0.95, na.rm = TRUE))
+  rename(ecoregion_nonbreeding_lcbd = LCBD) #%>%
+  # # let's do quantile calculation for hotspots now while we've got the ecoregion labels
+  # group_by(ECO_NAME) %>%
+  # mutate(lcbd_nonbreeding_quantile_cutoff = quantile(ecoregion_nonbreeding_lcbd, probs = 0.95, na.rm = TRUE))
 
 ####################################
 ####### Get species richness #######
@@ -115,19 +115,19 @@ breeding_richness <- breeding_mat %>%
   select(cell, ECO_NAME, everything()) %>%
   #filter(!is.na(ECO_NAME)) %>%
   mutate(breeding_richness = rowSums(across(3:last_col()))) %>%
-  select(cell, ECO_NAME, breeding_richness) %>%
-  group_by(ECO_NAME) %>%
-  mutate(breeding_quantile_cutoff = quantile(breeding_richness, probs = 0.95, na.rm = TRUE)) %>%
-  ungroup()
+  select(cell, ECO_NAME, breeding_richness) #%>%
+  # group_by(ECO_NAME) %>%
+  # mutate(breeding_quantile_cutoff = quantile(breeding_richness, probs = 0.95, na.rm = TRUE)) %>%
+  # ungroup()
 
 nonbreeding_richness <- nonbreeding_mat %>%
   select(cell, ECO_NAME, everything()) %>%
   #filter(!is.na(ECO_NAME)) %>%
   mutate(nonbreeding_richness = rowSums(across(3:last_col()))) %>%
-  select(cell, ECO_NAME, nonbreeding_richness) %>%
-  group_by(ECO_NAME) %>%
-  mutate(nonbreeding_quantile_cutoff = quantile(nonbreeding_richness, probs = 0.95, na.rm = TRUE)) %>%
-  ungroup()
+  select(cell, ECO_NAME, nonbreeding_richness) #%>%
+  # group_by(ECO_NAME) %>%
+  # mutate(nonbreeding_quantile_cutoff = quantile(nonbreeding_richness, probs = 0.95, na.rm = TRUE)) %>%
+  # ungroup()
 
 # join, column for each metric
 metrics <- full_join(breeding_lcbd, nonbreeding_lcbd) %>%
@@ -202,9 +202,9 @@ fd_metric_breeding <- bind_cols(breeding_cells, fric_df_breeding) %>%
   #left_join(fdis_df) %>%
   select(-site) %>%
   full_join(coords) %>%
-  group_by(ECO_NAME) %>%
-  mutate(across(c(FRic, FEve, FDiv), ~ quantile(.x, probs = 0.95, na.rm = TRUE), .names = "{col}_quantile")) %>%
-  ungroup() %>%
+  # group_by(ECO_NAME) %>%
+  # mutate(across(c(FRic, FEve, FDiv), ~ quantile(.x, probs = 0.95, na.rm = TRUE), .names = "{col}_quantile")) %>%
+  # ungroup() %>%
   select(-cell, -ECO_NAME) %>%
   select(x, y, everything()) %>%
   rename_with(.cols = -c(x,y), ~paste0(.x, "_breeding"))
@@ -215,9 +215,9 @@ fd_metric_nonbreeding <- bind_cols(nonbreeding_cells, fric_df_nonbreeding) %>%
   #left_join(fdis_df) %>%
   select(-site) %>%
   full_join(coords) %>%
-  group_by(ECO_NAME) %>%
-  mutate(across(c(FRic, FEve, FDiv), ~ quantile(.x, probs = 0.95, na.rm = TRUE), .names = "{col}_quantile")) %>%
-  ungroup() %>%
+  # group_by(ECO_NAME) %>%
+  # mutate(across(c(FRic, FEve, FDiv), ~ quantile(.x, probs = 0.95, na.rm = TRUE), .names = "{col}_quantile")) %>%
+  # ungroup() %>%
   select(-cell, -ECO_NAME) %>%
   select(x, y, everything()) %>%
   rename_with(.cols = -c(x,y), ~paste0(.x, "_nonbreeding"))
