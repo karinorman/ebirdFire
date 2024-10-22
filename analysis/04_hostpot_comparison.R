@@ -13,16 +13,18 @@ forest_poly <- cbi %>% filter(predict.high.severity.fire.final %in% c(1,2)) %>%
   # fillHoles()
 
 # get ecoregions as raster
-ecoregions <- vect(here::here("raw_data/ecoregions/ecoregions_edc.shp")) %>%
-  project("epsg:4326") %>%
+ecoregion_shp <- vect(here::here("raw_data/ecoregions/ecoregions_edc.shp")) %>%
+  project("epsg:4326")
+
+ecoregion_rast <- ecoregion_shp %>%
   select("ECO_NAME") %>%
   terra::rasterize(., cbi, field = "ECO_NAME")# %>%
   #resample(cbi, method = "near")
 
 metric_rast <- rast(here::here("data/metric_rast.tiff")) %>%
-  crop(ecoregions, mask = TRUE) %>%
-  c(., ecoregions, rast(here::here("data/fd_rast.tiff"))%>%
-      crop(ecoregions, mask = TRUE)) # %>%
+  crop(ecoregion_rast, mask = TRUE) %>%
+  c(., ecoregion_rast, rast(here::here("data/fd_rast.tiff"))%>%
+      crop(ecoregion_rast, mask = TRUE)) # %>%
   #crop(cbi, mask = TRUE)
 
 ecoregion_hotspots <- metric_rast %>%
@@ -138,3 +140,124 @@ overlap_df <- full_join(area, lowsev_int) %>%
   mutate(percent_lowsev = (lowsev_intersect/hotspot_area)*100, percent_highsev = (highsev_intersect/hotspot_area)*100)
 
 usethis::use_data(overlap_df)
+
+
+##################################################################
+#### test hotspot distributions against landscape expectation ####
+##################################################################
+
+### Perform binomial hypothesis test for each tail, where high severity is defined as a "success"
+### Alternative hypothesis: there is significantly more high severity (success) than expected by the ecoregion distribution &
+### there is significantly less than expected by the ecoregion distribution
+
+# get ratio of high to low severity for each ecoregion
+# get ratio for each ecoregion to parameterize "true" distribution
+ecoregion_names <- unique(ecoregion_shp$ECO_NAME)
+
+ecoregion_values <- map_dfr(ecoregion_names, function(x) {
+  filter_ecoregion <- ecoregion_shp %>% filter(ECO_NAME == x)
+  ecoregion_cbi <- crop(cbi, filter_ecoregion, mask = TRUE)
+
+  freq(ecoregion_cbi) %>%
+    select(-layer) %>%
+    pivot_wider(names_from = value, values_from = count) %>%
+    mutate(ECO_NAME = x)
+
+}) %>% mutate(p = `2`/(`1` + `2`))
+
+# get number of success (cells == 2) and number of trials (cells %in% c(1,2)) for each
+# ecoregion for hotspots of each metric
+hotspot_names <- names(hotspots_poly)
+
+hotspot_values <- map_dfr(hotspot_names, function(x){
+
+  map_dfr(ecoregion_names, hotspot = hotspots_poly[[x]], function(name, hotspot) {
+    #browser()
+    filter_ecoregion <- ecoregion_shp %>% filter(ECO_NAME == name)
+
+    ecoregion_hotspot <- crop(hotspot, filter_ecoregion)
+
+    hotspot_cbi <- crop(cbi, ecoregion_hotspot, mask = TRUE)
+
+    freq(hotspot_cbi) %>%
+      select(-layer) %>%
+      pivot_wider(names_from = value, values_from = count) %>%
+      mutate(ECO_NAME = name)
+
+  }) %>% mutate(hotspot_type = x)
+})
+
+# dataframe of values for binomial test
+binomial_df <- hotspot_values %>%
+  rowwise() %>%
+  mutate(n = sum(`1`,`2`, na.rm = TRUE)) %>%
+  # x is the argument for "successes"
+  select(hotspot_type, ECO_NAME, x = `2`, n) %>%
+  left_join(ecoregion_values %>% select(ECO_NAME,p)) %>%
+  mutate(x = ifelse(is.na(x), 0, x))
+
+# perform a test for upper and lower tail
+binomial_test <- binomial_df %>%
+  group_by(ECO_NAME, hotspot_type) %>%
+  mutate(greater.p.value = binom.test(x = x, n = n, p = p, alternative = "greater") %>% .$p.value,
+         lower.p.value = binom.test(x = x, n = n, p = p, alternative = "less") %>% .$p.value) %>%
+  ungroup() %>%
+  tidyr::separate(hotspot_type, into = "type", sep = "_", remove = FALSE) %>%
+  mutate(type = ifelse(type == "forest", "forest", "ecoregion"),
+         metric = stringr::str_remove(hotspot_type, "forest_")) %>%
+  select(-hotspot_type)
+
+# ecoregions that are significant for upper tail test
+greater_sig_ecoregions <- binomial_test %>% filter(greater.p.value < 0.05) %>%
+  filter(!metric %in% c("breeding_lcbd", "nonbreeding_lcbd")) %>%
+  # let's just look at forest hotspots for now
+  filter(type == "forest")
+
+# ecoregions that are significant for lower tail test
+lower_sig_ecoregions <- binomial_test %>% filter(lower.p.value < 0.05) %>%
+  filter(!metric %in% c("breeding_lcbd", "nonbreeding_lcbd")) %>%
+  # let's just look at forest hotspots for now
+  filter(type == "forest")
+
+
+# Let's map some stuff!
+
+#boundary to clip shapefiles
+boundary <- vect(here::here("data/study_boundary.shp"))
+
+# get a US boundary base map
+US_boundary_states <- rnaturalearth::ne_states(iso_a2 = "US") %>%
+  vect() %>%
+  project("epsg:4326") %>%
+  filter(name %in% c("Washington", "Oregon", "California", "Idaho", "Nevada",
+                     "Montana", "Arizona", "Utah", "Wyoming", "Texas", "Colorado", "New Mexico")) %>%
+  crop(ext(c(-130, -104, 18, 50)))
+
+US_boundary <- US_boundary_states %>% aggregate()
+
+map(c("ecoregion_breeding_lcbd", "breeding_richness", "FRic_breeding"), function(metric_name) {
+  #browser()
+
+  greater_sig_metrics <- greater_sig_ecoregions %>%
+  filter(metric == metric_name) %>%
+  pull(ECO_NAME)
+
+  lower_sig_metrics <- lower_sig_ecoregions %>%
+    filter(metric == metric_name) %>%
+    pull(ECO_NAME)
+
+indicator_shp <- ecoregion_shp %>%
+  mutate(significant = case_when(
+    ECO_NAME %in% greater_sig_metrics ~ "more higher severity than expected by chance",
+    ECO_NAME %in% lower_sig_metrics ~ "less higher severity than expected by chance",
+    .default = "nonsignificant"
+  )) %>%
+  crop(., boundary)
+
+ggplot() +
+  geom_spatvector(mapping = aes(fill = as.factor(significant)), data = indicator_shp, color = "black", linewidth = 0.4) +
+  geom_spatvector(data = US_boundary, fill = NA) +
+  scale_fill_discrete(type = c("#88CCEE", "#BC4749", "white"), name = "") +
+  theme_map() +
+  ggtitle(metric_name)
+})
