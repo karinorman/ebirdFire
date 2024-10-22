@@ -49,39 +49,6 @@ hotspots_poly <- c(lapply(1:length(names(ecoregion_hotspots)), function(x) as.po
                       lapply(1:length(names(forest_hotspots)), function(x) as.polygons(forest_hotspots[[x]])))
 
 names(hotspots_poly) <- c(names(ecoregion_hotspots), names(forest_hotspots))
-#
-#
-# ## FIXME: should this be cropped to the included ecoregions?
-# # get raster of hotspots for non-ecoregion layers
-# hotspot_rast <- c(metric_rast, fd_rast) %>%
-#   select(breeding_lcbd, nonbreeding_lcbd, breeding_richness, nonbreeding_richness,
-#          FRic_breeding, FEve_breeding, FDiv_breeding,
-#          FRic_nonbreeding, FEve_nonbreeding, FDiv_nonbreeding) %>%
-#   mutate(across(everything(),
-#                               ~ifelse(.x > quantile(.x, probs = 0.95, na.rm = TRUE), "a", NA)))
-#
-# # do it for ecoregions which already have quantile calculated for each group
-# ecoregion_hotspot_rast <- metric_rast %>%
-#   select(-c(breeding_lcbd, nonbreeding_lcbd)) %>%
-#   mutate(ecoregion_breeding_lcbd = ifelse(ecoregion_breeding_lcbd > lcbd_breeding_quantile_cutoff, "a", NA),
-#          ecoregion_nonbreeding_lcbd = ifelse(ecoregion_nonbreeding_lcbd > lcbd_nonbreeding_quantile_cutoff, "a", NA),
-#          ecoregion_breeding_richness = ifelse(breeding_richness > breeding_quantile_cutoff, "a", NA),
-#          ecoregion_nonbreeding_richness = ifelse(nonbreeding_richness > nonbreeding_quantile_cutoff, "a", NA)) %>%
-#   select(-ends_with("cutoff"), -c(breeding_richness, nonbreeding_richness))
-#
-# # Ecoregion quantiles for fd metrics
-# ecoregion_fd_hotspot_rast <- fd_rast %>%
-#   mutate(across(-starts_with("quantile"), ~ifelse(.x > get(paste0("quantile_", cur_column())), "a", NA))) %>%
-#   select(-starts_with("quantile_")) %>%
-#   rename_with(~paste0("ecoregion_", .x))
-#
-# hotspot_poly <- c(map(1:length(names(hotspot_rast)), ~as.polygons(hotspot_rast[[.x]])),
-#                   map(1:length(names(ecoregion_hotspot_rast)), ~as.polygons(ecoregion_hotspot_rast[[.x]])),
-#                   map(1:length(names(ecoregion_fd_hotspot_rast)), ~as.polygons(ecoregion_fd_hotspot_rast[[.x]])))
-#
-# names(hotspot_poly) <- c(names(hotspot_rast), names(ecoregion_hotspot_rast), names(ecoregion_fd_hotspot_rast))
-#
-# writeVector(vect(hotspot_poly), here::here("data/hotspots.shp"))
 
 # Let's get polygons for low and high severity fire
 low_sev <- cbi %>% filter(predict.high.severity.fire.final == 1) %>%
@@ -151,11 +118,6 @@ hotspot_highsev <- lapply(1:length(names(hotspots_poly)), function(x) intersect(
 # ggsave(here::here("figures/hotspot_maps_big_legend.jpg"), hotspot_plot, width = 10, height = 10, dpi = "retina")
 # ggsave(here::here("figures/hotspot_maps_small_legend.jpg"), hotspot_plot, width = 30, height = 30, dpi = "retina")
 #
-
-# we want the area relative to that in the CBI extent
-# this is NOT RIGHT for the non-ecoregion hotspots, since those quantiles were calculated relative
-# to the whole study extent, not just CBI, so only use the ecoregion overlap!
-# boundary <- vect(here::here("data/study_boundary.shp"))
 
 area <-  map(hotspots_poly, ~expanse(.x)) %>%
   #map(., expanse) %>%
