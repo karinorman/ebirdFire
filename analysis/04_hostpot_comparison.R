@@ -22,7 +22,8 @@ ecoregions <- vect(here::here("raw_data/ecoregions/ecoregions_edc.shp")) %>%
 metric_rast <- rast(here::here("data/metric_rast.tiff")) %>%
   crop(ecoregions, mask = TRUE) %>%
   c(., ecoregions, rast(here::here("data/fd_rast.tiff"))%>%
-      crop(ecoregions, mask = TRUE))
+      crop(ecoregions, mask = TRUE)) # %>%
+  #crop(cbi, mask = TRUE)
 
 ecoregion_hotspots <- metric_rast %>%
   terra::as.data.frame(., xy = TRUE) %>%
@@ -41,8 +42,13 @@ forest_hotspots <- metric_rast %>%
                 ~ifelse(.x > quantile(.x, probs = 0.95, na.rm = TRUE), 1, NA))) %>%
   ungroup() %>%
   select(-ECO_NAME) %>%
-  rast(.,  type="xyz", crs = "epsg:4326")
+  rast(.,  type="xyz", crs = "epsg:4326") %>%
+  rename_with(~paste0("forest_", .x))
 
+hotspots_poly <- c(lapply(1:length(names(ecoregion_hotspots)), function(x) as.polygons(ecoregion_hotspots[[x]])),
+                      lapply(1:length(names(forest_hotspots)), function(x) as.polygons(forest_hotspots[[x]])))
+
+names(hotspots_poly) <- c(names(ecoregion_hotspots), names(forest_hotspots))
 #
 #
 # ## FIXME: should this be cropped to the included ecoregions?
@@ -85,19 +91,9 @@ high_sev <- cbi %>% filter(predict.high.severity.fire.final == 2) %>%
   as.polygons()
 
 # get overlap between high severity and hotspots
-ecoregion_hot_highsev <- lapply(1:length(names(ecoregion_hotspots)),
-                                function(x) {
-                                  #browser()
-                                  as.polygons(ecoregion_hotspots[[x]]) %>%
-                                    intersect(., high_sev)}) %>%
-  vect()
+hotspot_highsev <- lapply(1:length(names(hotspots_poly)), function(x) intersect(hotspots_poly[[1]], high_sev))
 
-forest_hot_highsev <- lapply(1:length(names(forest_hotspots)),
-                             function(x) {
-                               #browser()
-                               as.polygons(ecoregion_hotspots[[x]]) %>%
-                                 intersect(., high_sev)}) %>%
-  vect()
+
 
 # # get metric layers in the right order
 # metrics <- c(metric_rast, fd_rast) %>%
@@ -159,21 +155,22 @@ forest_hot_highsev <- lapply(1:length(names(forest_hotspots)),
 # we want the area relative to that in the CBI extent
 # this is NOT RIGHT for the non-ecoregion hotspots, since those quantiles were calculated relative
 # to the whole study extent, not just CBI, so only use the ecoregion overlap!
-boundary <- vect(here::here("data/study_boundary.shp"))
+# boundary <- vect(here::here("data/study_boundary.shp"))
 
-area <-  map(hotspot_poly, ~crop(.x, cbi)) %>%
-  map(., expanse) %>%
+area <-  map(hotspots_poly, ~expanse(.x)) %>%
+  #map(., expanse) %>%
   as.data.frame() %>%
   pivot_longer(everything(), names_to = "metric", values_to = "hotspot_area")
 
-lowsev_int <- map(hotspot_poly, ~ terra::intersect(.x, low_sev) %>% expanse()) %>%
+lowsev_int <- map(hotspots_poly, ~ terra::intersect(.x, low_sev) %>% expanse()) %>%
   as.data.frame() %>%
   pivot_longer(everything(), names_to = "metric", values_to = "lowsev_intersect")
 
-highsev_int <- map(hotspot_poly, ~ intersect(.x, high_sev) %>% expanse()) %>%
+highsev_int <- map(hotspots_poly, ~ intersect(.x, high_sev) %>% expanse()) %>%
   as.data.frame() %>%
   pivot_longer(everything(), names_to = "metric", values_to = "highsev_intersect")
 
+# why don't the forest hotspot percentages sum to zero? Should be any other area in the CBI...
 overlap_df <- full_join(area, lowsev_int) %>%
   full_join(highsev_int) %>%
   mutate(percent_lowsev = (lowsev_intersect/hotspot_area)*100, percent_highsev = (highsev_intersect/hotspot_area)*100)
