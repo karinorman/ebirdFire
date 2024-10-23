@@ -8,24 +8,29 @@ library(cowplot)
 cbi <- rast(here::here("data/cbi.tif"))
 
 forest_poly <- cbi %>% filter(predict.high.severity.fire.final %in% c(1,2)) %>%
-  as.polygons() #%>%
+  as.polygons(extent = FALSE, na.rm = TRUE, aggregate = FALSE, crs = "epsg:4326") #%>%
   # aggregate() %>%
   # fillHoles()
 
-# get ecoregions as raster
+#boundary to clip shapefiles
+boundary <- vect(here::here("data/study_boundary.shp"))
+
+# get ecoregions as shapefile
 ecoregion_shp <- vect(here::here("raw_data/ecoregions/ecoregions_edc.shp")) %>%
-  project("epsg:4326")
+  project("epsg:4326") %>%
+  crop(., boundary)
+
+metric_rast <- rast(here::here("data/metric_rast.tiff")) %>%
+  crop(ecoregion_shp, mask = TRUE) %>%
+  c(., rast(here::here("data/fd_rast.tiff"))%>%
+      crop(ecoregion_shp, mask = TRUE))
 
 ecoregion_rast <- ecoregion_shp %>%
   select("ECO_NAME") %>%
-  terra::rasterize(., cbi, field = "ECO_NAME")# %>%
-  #resample(cbi, method = "near")
+  terra::rasterize(., metric_rast, field = "ECO_NAME")# %>%
+#resample(cbi, method = "near")
 
-metric_rast <- rast(here::here("data/metric_rast.tiff")) %>%
-  crop(ecoregion_rast, mask = TRUE) %>%
-  c(., ecoregion_rast, rast(here::here("data/fd_rast.tiff"))%>%
-      crop(ecoregion_rast, mask = TRUE)) # %>%
-  #crop(cbi, mask = TRUE)
+metric_rast <- c(metric_rast, ecoregion_rast)
 
 ecoregion_hotspots <- metric_rast %>%
   terra::as.data.frame(., xy = TRUE) %>%
@@ -154,14 +159,29 @@ usethis::use_data(overlap_df)
 # get ratio for each ecoregion to parameterize "true" distribution
 ecoregion_names <- unique(ecoregion_shp$ECO_NAME)
 
-ecoregion_values <- map_dfr(ecoregion_names, function(x) {
-  filter_ecoregion <- ecoregion_shp %>% filter(ECO_NAME == x)
-  ecoregion_cbi <- crop(cbi, filter_ecoregion, mask = TRUE)
+# ecoregion_values <- map_dfr(ecoregion_names, function(x) {
+#   browser()
+#   filter_ecoregion <- ecoregion_shp %>% filter(ECO_NAME == x)
+#   ecoregion_cbi <- crop(cbi, filter_ecoregion, mask = TRUE)
+#
+#   freq(ecoregion_cbi) %>%
+#     select(-layer) %>%
+#     pivot_wider(names_from = value, values_from = count) %>%
+#     mutate(ECO_NAME = x)
+#
+# }) %>% mutate(p = `2`/(`1` + `2`))
 
-  freq(ecoregion_cbi) %>%
-    select(-layer) %>%
-    pivot_wider(names_from = value, values_from = count) %>%
+ecoregion_values <- map_dfr(ecoregion_names, function(x) {
+
+  #browser()
+  filter_ecoregion <- ecoregion_shp %>% filter(ECO_NAME == x)
+  ecoregion_cbi <- extract(cbi, filter_ecoregion)
+
+  ecoregion_cbi %>%
+    count(predict.high.severity.fire.final) %>%
+    pivot_wider(names_from = predict.high.severity.fire.final, values_from = n) %>%
     mutate(ECO_NAME = x)
+
 
 }) %>% mutate(p = `2`/(`1` + `2`))
 
@@ -177,12 +197,12 @@ hotspot_values <- map_dfr(hotspot_names, function(x){
 
     ecoregion_hotspot <- crop(hotspot, filter_ecoregion)
 
-    hotspot_cbi <- crop(cbi, ecoregion_hotspot, mask = TRUE)
+    ecoregion_cbi <- extract(cbi, ecoregion_hotspot)
 
-    freq(hotspot_cbi) %>%
-      select(-layer) %>%
-      pivot_wider(names_from = value, values_from = count) %>%
-      mutate(ECO_NAME = name)
+    ecoregion_cbi %>%
+      count(predict.high.severity.fire.final) %>%
+      pivot_wider(names_from = predict.high.severity.fire.final, values_from = n) %>%
+      mutate(ECO_NAME = x)
 
   }) %>% mutate(hotspot_type = x)
 })
@@ -221,9 +241,6 @@ lower_sig_ecoregions <- binomial_test %>% filter(lower.p.value < 0.05) %>%
 
 
 # Let's map some stuff!
-
-#boundary to clip shapefiles
-boundary <- vect(here::here("data/study_boundary.shp"))
 
 # get a US boundary base map
 US_boundary_states <- rnaturalearth::ne_states(iso_a2 = "US") %>%
