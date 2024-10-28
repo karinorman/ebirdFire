@@ -5,32 +5,30 @@ library(purrr)
 library(ggplot2)
 library(cowplot)
 
-cbi <- rast(here::here("data/cbi.tif"))
-
-forest_poly <- cbi %>% filter(predict.high.severity.fire.final %in% c(1,2)) %>%
-  as.polygons(extent = FALSE, na.rm = TRUE, aggregate = FALSE, crs = "epsg:4326") #%>%
-  # aggregate() %>%
-  # fillHoles()
-
 #boundary to clip shapefiles
 boundary <- vect(here::here("data/study_boundary.shp"))
+
+cbi <- rast(here::here("data/cbi.tif")) %>%
+  crop(boundary, mask = TRUE)
+
+# forest_poly <- cbi %>% filter(predict.high.severity.fire.final %in% c(1,2)) %>%
+#   as.polygons(extent = FALSE, na.rm = TRUE, crs = "epsg:4326")
 
 # get ecoregions as shapefile
 ecoregion_shp <- vect(here::here("raw_data/ecoregions/ecoregions_edc.shp")) %>%
   project("epsg:4326") %>%
   crop(., boundary)
 
+ecoregion_rast <- ecoregion_shp %>%
+  select("ECO_NAME") %>%
+  terra::rasterize(., cbi, field = "ECO_NAME")# %>%
+#resample(cbi, method = "near")
+
 metric_rast <- rast(here::here("data/metric_rast.tiff")) %>%
   crop(ecoregion_shp, mask = TRUE) %>%
   c(., rast(here::here("data/fd_rast.tiff"))%>%
-      crop(ecoregion_shp, mask = TRUE))
-
-ecoregion_rast <- ecoregion_shp %>%
-  select("ECO_NAME") %>%
-  terra::rasterize(., metric_rast, field = "ECO_NAME")# %>%
-#resample(cbi, method = "near")
-
-metric_rast <- c(metric_rast, ecoregion_rast)
+      crop(ecoregion_shp, mask = TRUE)) %>%
+  c(., ecoregion_rast)
 
 ecoregion_hotspots <- metric_rast %>%
   terra::as.data.frame(., xy = TRUE) %>%
@@ -41,8 +39,8 @@ ecoregion_hotspots <- metric_rast %>%
   select(-ECO_NAME) %>%
   rast(.,  type="xyz", crs = "epsg:4326")
 
-forest_hotspots <- metric_rast %>%
-  crop(forest_poly, mask = TRUE) %>%
+forest_hotspots <- c(cbi, metric_rast) %>%
+  filter(predict.high.severity.fire.final %in% c(1,2)) %>%
   terra::as.data.frame(., xy = TRUE) %>%
   group_by(ECO_NAME) %>%
   mutate(across(-c(x,y),
@@ -52,20 +50,18 @@ forest_hotspots <- metric_rast %>%
   rast(.,  type="xyz", crs = "epsg:4326") %>%
   rename_with(~paste0("forest_", .x))
 
-hotspots_poly <- c(lapply(1:length(names(ecoregion_hotspots)), function(x) as.polygons(ecoregion_hotspots[[x]])),
-                      lapply(1:length(names(forest_hotspots)), function(x) as.polygons(forest_hotspots[[x]])))
+hotspot_rasts <- c(ecoregion_hotspots, forest_hotspots) %>%
+  select(-forest_predict.high.severity.fire.final)
 
-names(hotspots_poly) <- c(names(ecoregion_hotspots), names(forest_hotspots))
-
-# Let's get polygons for low and high severity fire
-low_sev <- cbi %>% filter(predict.high.severity.fire.final == 1) %>%
-  as.polygons()
-
-high_sev <- cbi %>% filter(predict.high.severity.fire.final == 2) %>%
-  as.polygons()
-
-# get overlap between high severity and hotspots
-hotspot_highsev <- lapply(1:length(names(hotspots_poly)), function(x) intersect(hotspots_poly[[1]], high_sev))
+# # Let's get polygons for low and high severity fire
+# low_sev <- cbi %>% filter(predict.high.severity.fire.final == 1) %>%
+#   as.polygons()
+#
+# high_sev <- cbi %>% filter(predict.high.severity.fire.final == 2) %>%
+#   as.polygons()
+#
+# # get overlap between high severity and hotspots
+# hotspot_highsev <- lapply(1:length(names(hotspots_poly)), function(x) intersect(hotspots_poly[[1]], high_sev))
 
 
 
@@ -126,23 +122,27 @@ hotspot_highsev <- lapply(1:length(names(hotspots_poly)), function(x) intersect(
 # ggsave(here::here("figures/hotspot_maps_small_legend.jpg"), hotspot_plot, width = 30, height = 30, dpi = "retina")
 #
 
-area <-  map(hotspots_poly, ~expanse(.x)) %>%
-  #map(., expanse) %>%
-  as.data.frame() %>%
-  pivot_longer(everything(), names_to = "metric", values_to = "hotspot_area")
+area <- hotspot_rasts  %>%
+  expanse(usenames = TRUE) %>%
+  rename(metric = layer)
 
-lowsev_int <- map(hotspots_poly, ~ terra::intersect(.x, low_sev) %>% expanse()) %>%
-  as.data.frame() %>%
-  pivot_longer(everything(), names_to = "metric", values_to = "lowsev_intersect")
+lowsev_int <- hotspot_rasts %>%
+  c(., cbi) %>%
+  filter(predict.high.severity.fire.final == 1) %>%
+  expanse(usenames = TRUE) %>%
+  rename(metric = layer, lowsev_area = area)
 
-highsev_int <- map(hotspots_poly, ~ intersect(.x, high_sev) %>% expanse()) %>%
-  as.data.frame() %>%
-  pivot_longer(everything(), names_to = "metric", values_to = "highsev_intersect")
+highsev_int <-  hotspot_rasts %>%
+  c(., cbi) %>%
+  filter(predict.high.severity.fire.final == 2) %>%
+  expanse(usenames = TRUE) %>%
+  rename(metric = layer, highsev_area = area)
 
 # why don't the forest hotspot percentages sum to zero? Should be any other area in the CBI...
 overlap_df <- full_join(area, lowsev_int) %>%
   full_join(highsev_int) %>%
-  mutate(percent_lowsev = (lowsev_intersect/hotspot_area)*100, percent_highsev = (highsev_intersect/hotspot_area)*100)
+  mutate(percent_lowsev = (lowsev_area/area)*100, percent_highsev = (highsev_area/area)*100) %>%
+  filter(metric != "predict.high.severity.fire.final")
 
 usethis::use_data(overlap_df)
 
@@ -187,22 +187,29 @@ ecoregion_values <- map_dfr(ecoregion_names, function(x) {
 
 # get number of success (cells == 2) and number of trials (cells %in% c(1,2)) for each
 # ecoregion for hotspots of each metric
-hotspot_names <- names(hotspots_poly)
+hotspot_names <- names(hotspot_rasts)
 
 hotspot_values <- map_dfr(hotspot_names, function(x){
 
-  map_dfr(ecoregion_names, hotspot = hotspots_poly[[x]], function(name, hotspot) {
+  map_dfr(ecoregion_names, hotspot = hotspot_rasts[[x]], function(name, hotspot) {
     #browser()
+
+    metric_name <- names(hotspot)
+
     filter_ecoregion <- ecoregion_shp %>% filter(ECO_NAME == name)
 
     ecoregion_hotspot <- crop(hotspot, filter_ecoregion)
 
-    ecoregion_cbi <- extract(cbi, ecoregion_hotspot)
+    ecoregion_cbi <- crop(cbi, filter_ecoregion) %>%
+                            c(., ecoregion_hotspot) %>%
+      filter(!!as.symbol(metric_name) == 1)
 
     ecoregion_cbi %>%
-      count(predict.high.severity.fire.final) %>%
-      pivot_wider(names_from = predict.high.severity.fire.final, values_from = n) %>%
-      mutate(ECO_NAME = x)
+      select(predict.high.severity.fire.final) %>%
+      freq() %>%
+      pivot_wider(names_from = value, values_from = count) %>%
+      mutate(ECO_NAME = name) %>%
+      select(-layer)
 
   }) %>% mutate(hotspot_type = x)
 })
