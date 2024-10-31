@@ -198,9 +198,9 @@ hotspot_values <- map_dfr(hotspot_names, function(x){
 
     filter_ecoregion <- ecoregion_shp %>% filter(ECO_NAME == name)
 
-    ecoregion_hotspot <- crop(hotspot, filter_ecoregion)
+    ecoregion_hotspot <- crop(hotspot, filter_ecoregion, mask = TRUE)
 
-    ecoregion_cbi <- crop(cbi, filter_ecoregion) %>%
+    ecoregion_cbi <- crop(cbi, filter_ecoregion, mask = TRUE) %>%
                             c(., ecoregion_hotspot) %>%
       filter(!!as.symbol(metric_name) == 1)
 
