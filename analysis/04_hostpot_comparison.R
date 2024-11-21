@@ -155,8 +155,7 @@ usethis::use_data(overlap_df)
 ### Alternative hypothesis: there is significantly more high severity (success) than expected by the ecoregion distribution &
 ### there is significantly less than expected by the ecoregion distribution
 
-# get ratio of high to low severity for each ecoregion
-# get ratio for each ecoregion to parameterize "true" distribution
+# get ratio of high to low severity for each ecoregion to parameterize "true" distribution
 ecoregion_names <- unique(ecoregion_shp$ECO_NAME)
 
 # ecoregion_values <- map_dfr(ecoregion_names, function(x) {
@@ -246,6 +245,9 @@ lower_sig_ecoregions <- binomial_test %>% filter(lower.p.value < 0.05) %>%
   # let's just look at forest hotspots for now
   filter(type == "forest")
 
+sig_ecoregions_df <- greater_sig_ecoregions %>%
+  mutate(test_tail = "upper") %>%
+  bind_rows(lower_sig_ecoregions %>% mutate(test_tail = "lower"))
 
 # Let's map some stuff!
 
@@ -262,12 +264,12 @@ US_boundary <- US_boundary_states %>% aggregate()
 map(c("ecoregion_breeding_lcbd", "breeding_richness", "FRic_breeding"), function(metric_name) {
   #browser()
 
-  greater_sig_metrics <- greater_sig_ecoregions %>%
-  filter(metric == metric_name) %>%
+  greater_sig_metrics <- sig_ecoregions_df %>%
+  filter(test_tail == "upper", metric == metric_name) %>%
   pull(ECO_NAME)
 
-  lower_sig_metrics <- lower_sig_ecoregions %>%
-    filter(metric == metric_name) %>%
+  lower_sig_metrics <- sig_ecoregions_df %>%
+    filter(test_tail == "lower", metric == metric_name) %>%
     pull(ECO_NAME)
 
 indicator_shp <- ecoregion_shp %>%
