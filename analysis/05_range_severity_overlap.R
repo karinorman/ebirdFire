@@ -26,15 +26,11 @@ resident_df <- data.frame(file = list.files(resident_path)) %>%
 resident_rast <- rast(resident_df$path)
 resident_rast_crop <- crop(resident_rast, boundary, mask = TRUE)
 
-total_area <- map_dfr(names(resident_rast), ~ tibble(species_code = .x,
-                                                     total_area = freq(resident_rast[[.x]], value = 1)$count))
-wus_area <- map_dfr(names(resident_rast_crop), ~ tibble(species_code = .x,
-                                                        wus_area = freq(resident_rast_crop[[.x]], value = 1)$count))
 
-resident_polys <- map(names(resident_rast_crop), ~resident_rast_crop[[.x]] %>%
-                        subst(., 0, NA) %>%
-                        as.polygons())
-names(resident_polys) <- names(resident_rast_crop)
+# resident_polys <- map(names(resident_rast_crop), ~resident_rast_crop[[.x]] %>%
+#                         subst(., 0, NA) %>%
+#                         as.polygons())
+# names(resident_polys) <- names(resident_rast_crop)
 
 # breeding
 breeding_path <- here::here("data/species_ranges/breeding")
@@ -55,7 +51,7 @@ nonresident_df <- breeding_df %>%
   full_join(nonbreeding_df %>% select(-file)) %>%
   select(species_code, breeding_path, nonbreeding_path)
 
-nonresident_polygons <- pmap(nonresident_df, function(species_code, breeding_path, nonbreeding_path){
+nonresident_rast <- pmap(nonresident_df, function(species_code, breeding_path, nonbreeding_path){
 
   col = sym(species_code)
 
@@ -79,41 +75,57 @@ nonresident_polygons <- pmap(nonresident_df, function(species_code, breeding_pat
     return(NULL)
   }else{
 
-    sum_rast %>%
-      subst(., 0, NA) %>%
-      subst(., 2, 1) %>%
-      as.polygons() %>%
-      rename(!!col := sum)
+    return(sum_rast %>% rename(!!col := sum))
+    # sum_rast %>%
+    #   subst(., 0, NA) %>%
+    #   subst(., 2, 1) %>%
+    #   as.polygons() %>%
+    #   rename(!!col := sum)
   }
 
 })
 
-names(nonresident_polygons) <- nonresident_df$species_code
+#names(nonresident_polygons) <- nonresident_df$species_code
+species_rasts_crop  <- c(resident_rast_crop, rast(unlist(nonresident_rast)))
 
+cbi_resamp <- resample(cbi, species_rasts_crop, method = "near")
 
-get_intersect <- function(species_polys, cbi_poly){
-  # get dataframe of intersected area for each species
-  intersect_df = map(species_polys, ~ terra::intersect(.x, cbi_poly) %>% expanse()) %>%
-    compact() %>%
-    as.data.frame() %>%
-    pivot_longer(everything(), names_to = "species_code", values_to = "intersect")
+high_sev_int_rasts <- species_rasts_crop %>%
+  crop(cbi_resamp, mask = TRUE) %>%
+  c(., cbi_resamp) %>%
+  filter(predict.high.severity.fire.final == 2) %>%
+  select(-predict.high.severity.fire.final)
 
-  area_df <- map(species_polys, expanse) %>%
-    as.data.frame() %>%
-    pivot_longer(everything(), names_to = "species_code", values_to = "area")
+sev_area <- map_dfr(names(high_sev_int_rasts), ~ tibble(species_code = .x,
+                                                        sev_area = freq(high_sev_int_rasts[[.x]], value = 1)$count))
 
-  area_df %>%
-    left_join(intersect_df) %>%
-    mutate(intersect = replace_na(intersect,0), percent = intersect/area) %>%
-    select(species_code, percent, area)
-}
+wus_area <- map_dfr(names(species_rasts_crop), ~ tibble(species_code = .x,
+                                                        wus_area = freq(species_rasts_crop[[.x]], value = 1)$count))
 
-percent_range_highsev_df <- get_intersect(compact(resident_polys), high_sev) %>%
-  mutate(range_type = "resident") %>%
-  full_join(get_intersect(compact(nonresident_polygons), high_sev) %>% mutate(range_type = "nonresident"))
+# get_intersect <- function(species_polys, cbi_poly){
+#   # get dataframe of intersected area for each species
+#   intersect_df = map(species_polys, ~ terra::intersect(.x, cbi_poly) %>% expanse()) %>%
+#     compact() %>%
+#     as.data.frame() %>%
+#     pivot_longer(everything(), names_to = "species_code", values_to = "intersect")
+#
+#   area_df <- map(species_polys, expanse) %>%
+#     as.data.frame() %>%
+#     pivot_longer(everything(), names_to = "species_code", values_to = "area")
+#
+#   area_df %>%
+#     left_join(intersect_df) %>%
+#     mutate(intersect = replace_na(intersect,0), percent = intersect/area) %>%
+#     select(species_code, percent, area)
+# }
+#
+# percent_range_highsev_df <- get_intersect(compact(resident_polys), high_sev) %>%
+#   mutate(range_type = "resident") %>%
+#   full_join(get_intersect(compact(nonresident_polygons), high_sev) %>% mutate(range_type = "nonresident"))
+#
+# usethis::use_data(percent_range_highsev_df)
 
-usethis::use_data(percent_range_highsev_df)
-
+# Get total range areas for resident and nonresident species
 nonresident_area_df <- pmap(nonresident_df, function(species_code, breeding_path, nonbreeding_path){
 
   if(is.na(breeding_path)) {
@@ -128,24 +140,25 @@ nonresident_area_df <- pmap(nonresident_df, function(species_code, breeding_path
     filter(value %in% c(1,2)) %>%
     pull(count) %>%
     sum()
+#
+#   wus_area <- terra::freq(sum(crop(rast_pair, boundary, mask = TRUE))) %>%
+#     filter(value %in% c(1,2)) %>%
+#     pull(count) %>%
+#     sum()
 
-  wus_area <- terra::freq(sum(crop(rast_pair, boundary, mask = TRUE))) %>%
-    filter(value %in% c(1,2)) %>%
-    pull(count) %>%
-    sum()
+  tibble(species_code, total_area)
+}) %>% bind_rows()
 
-  tibble(species_code , total_area, wus_area)
-})
+total_area <- map_dfr(names(resident_rast), ~ tibble(species_code = .x,
+                                                     total_area = freq(resident_rast[[.x]], value = 1)$count)) %>%
+  bind_rows(nonresident_area_df)
 
-range_area_df <- nonresident_area_df %>%
-  bind_rows(resident_area_df) %>%
-  mutate(wus_percent = wus_area/total_area)
 
-species_range_metrics <- range_area_df %>%
-  rename(total_range_area = total_area, wus_range_area = wus_area) %>%
-  full_join(percent_range_highsev_df) %>%
-  rename(high_sev_percent = percent) %>%
-  select(-area) %>%
-  filter(wus_range_area != 0)
+species_range_metrics <- total_area %>%
+  left_join(wus_area) %>%
+  left_join(sev_area) %>%
+  mutate(wus_percent = wus_area/total_area,
+         high_sev_percent = sev_area/wus_area) %>%
+  filter(wus_area != 0)
 
 usethis::use_data(species_range_metrics)
