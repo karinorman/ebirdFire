@@ -26,12 +26,6 @@ resident_df <- data.frame(file = list.files(resident_path)) %>%
 resident_rast <- rast(resident_df$path)
 resident_rast_crop <- crop(resident_rast, boundary, mask = TRUE)
 
-
-# resident_polys <- map(names(resident_rast_crop), ~resident_rast_crop[[.x]] %>%
-#                         subst(., 0, NA) %>%
-#                         as.polygons())
-# names(resident_polys) <- names(resident_rast_crop)
-
 # breeding
 breeding_path <- here::here("data/species_ranges/breeding")
 breeding_df <- data.frame(file = list.files(breeding_path)) %>%
@@ -101,29 +95,6 @@ sev_area <- map_dfr(names(high_sev_int_rasts), ~ tibble(species_code = .x,
 
 wus_area <- map_dfr(names(species_rasts_crop), ~ tibble(species_code = .x,
                                                         wus_area = freq(species_rasts_crop[[.x]], value = 1)$count))
-
-# get_intersect <- function(species_polys, cbi_poly){
-#   # get dataframe of intersected area for each species
-#   intersect_df = map(species_polys, ~ terra::intersect(.x, cbi_poly) %>% expanse()) %>%
-#     compact() %>%
-#     as.data.frame() %>%
-#     pivot_longer(everything(), names_to = "species_code", values_to = "intersect")
-#
-#   area_df <- map(species_polys, expanse) %>%
-#     as.data.frame() %>%
-#     pivot_longer(everything(), names_to = "species_code", values_to = "area")
-#
-#   area_df %>%
-#     left_join(intersect_df) %>%
-#     mutate(intersect = replace_na(intersect,0), percent = intersect/area) %>%
-#     select(species_code, percent, area)
-# }
-#
-# percent_range_highsev_df <- get_intersect(compact(resident_polys), high_sev) %>%
-#   mutate(range_type = "resident") %>%
-#   full_join(get_intersect(compact(nonresident_polygons), high_sev) %>% mutate(range_type = "nonresident"))
-#
-# usethis::use_data(percent_range_highsev_df)
 
 # Get total range areas for resident and nonresident species
 nonresident_area_df <- pmap(nonresident_df, function(species_code, breeding_path, nonbreeding_path){
