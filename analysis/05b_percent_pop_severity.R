@@ -74,3 +74,4 @@ pop_mets <- breeding_pop_mets %>%
               mutate(type = "resident")) %>%
   mutate(percent = sev_pop/total_pop)
 
+usethis::use_data(pop_mets)
