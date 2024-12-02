@@ -53,6 +53,8 @@ forest_hotspots <- c(cbi, metric_rast) %>%
 hotspot_rasts <- c(ecoregion_hotspots, forest_hotspots) %>%
   select(-forest_predict.high.severity.fire.final)
 
+writeRaster(hotspot_rasts, here::here("data/hotspot_rasts.tif"))
+
 # # Let's get polygons for low and high severity fire
 # low_sev <- cbi %>% filter(predict.high.severity.fire.final == 1) %>%
 #   as.polygons()

@@ -202,7 +202,7 @@ ggsave(here::here("figures/cbi.png"), cbi_plot, width = 10, height = 10, bg = "t
 ####### hotspot maps ###########
 #################################
 
-hotspot_poly <- vect(here::here("data/hotspots.shp"))
+hotspot_rast <- rast(here::here("data/hotspot_rasts.tif"))
 
 plot_cbi <- cbi %>%
   mutate(predict.high.severity.fire.final =
@@ -212,7 +212,7 @@ plot_refugia <- function(metric_col){
 ggplot() +
   geom_spatvector(data = US_boundary, color = "black", fill = "white") +
   geom_spatvector(data = as.polygons(cbi) %>% aggregate(), color = "#DDDDDDBF", alpha = 0.5) +
-  geom_spatraster(data = plot_cbi %>% crop(hotspot_poly[[metric_col]], mask = TRUE)) +
+  geom_spatraster(data = plot_cbi %>% crop(hotspot_rast[[metric_col]], mask = TRUE)) +
   scale_fill_manual(values = list(`1` = "#82A6B1", `2` =  "#BC4749"), na.value = "#DDDDDDBF", na.translate = FALSE,
                     labels = c("Refugia", "Areas of Concern")) +
   theme_void() +
@@ -230,13 +230,13 @@ ggplot() +
   )
 }
 
-breeding_lcbd_refugia <- plot_refugia("ecoregion_breeding_lcbd")
-ggsave(here::here("figures/refugia_eco_breeding_lcbd.png", breeding_lcbd_refugia))
+breeding_lcbd_refugia <- plot_refugia("forest_ecoregion_breeding_lcbd")
+ggsave(here::here("figures/refugia_eco_breeding_lcbd.png"), breeding_lcbd_refugia)
 
-breeding_richness_refugia <- plot_refugia("breeding_richness")
+breeding_richness_refugia <- plot_refugia("forest_breeding_richness")
 ggsave(here::here("figures/refugia_breeding_richness.png"), breeding_richness_refugia)
 
-breeding_fric_refugia <- plot_refugia("FRic_breeding")
+breeding_fric_refugia <- plot_refugia("forest_FRic_breeding")
 ggsave(here::here("figures/refugia_breeding_fric.png"), breeding_fric_refugia)
 
 #################################
@@ -247,10 +247,7 @@ plot_metric_hotspot_map <- function(data, metric_col){
 
   col = sym(metric_col)
 
-  if(stringr::str_detect(metric_col, "ecoregion")){
-    poly_name = col
-  } else {poly_name = paste0("ecoregion_", metric_col)}
-
+  poly_name = paste0("forest_", metric_col)
 
   ggplot() +
     geom_spatraster(data = data %>% select(!!col) %>% crop(., ecoregions, mask = TRUE),
@@ -258,7 +255,7 @@ plot_metric_hotspot_map <- function(data, metric_col){
     scale_fill_continuous(type = "viridis", na.value = "transparent") +
     geom_spatvector(data = boundary, fill = "transparent", colour = "black") +
     #geom_spatvector(data = ecoregions, fill = "transparent", colour = "white") +
-    geom_spatvector(data = hotspot_poly[[poly_name]] %>% crop(., ecoregions), fill = "#FDE725FF", color = "transparent") +
+    geom_spatvector(data = as.polygons(hotspot_rast[[poly_name]]), fill = "#FDE725FF", color = "#FDE725FF") +
     theme_void() +
     theme(legend.title=element_blank(),
           panel.background = element_rect(fill = "transparent",
