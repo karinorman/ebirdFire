@@ -276,16 +276,18 @@ map(c("ecoregion_breeding_lcbd", "breeding_richness", "FRic_breeding"), function
 
 indicator_shp <- ecoregion_shp %>%
   mutate(significant = case_when(
-    ECO_NAME %in% greater_sig_metrics ~ "more higher severity than expected by chance",
-    ECO_NAME %in% lower_sig_metrics ~ "less higher severity than expected by chance",
+    ECO_NAME %in% greater_sig_metrics ~ "more higher severity",
+    ECO_NAME %in% lower_sig_metrics ~ "less high severity",
     .default = "nonsignificant"
   )) %>%
   crop(., boundary)
 
-ggplot() +
+plot <- ggplot() +
   geom_spatvector(mapping = aes(fill = as.factor(significant)), data = indicator_shp, color = "black", linewidth = 0.4) +
   geom_spatvector(data = US_boundary, fill = NA) +
-  scale_fill_discrete(type = c("#88CCEE", "#BC4749", "white"), name = "") +
+  scale_fill_discrete(type = c("#117733", "#e1ad01", "white"), name = "") +
   theme_map() +
   ggtitle(metric_name)
+
+ggsave(here::here(paste0("figures/", metric_name, "_binomial_test.png")), plot)
 })
