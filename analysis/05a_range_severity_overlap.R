@@ -7,9 +7,6 @@ library(cowplot)
 
 cbi <- rast(here::here("data/cbi.tif"))
 
-high_sev <- cbi %>% filter(predict.high.severity.fire.draft == 2) %>%
-  as.polygons()
-
 boundary <- vect(here::here("data/study_boundary.shp"))
 
 load(here::here("data/species_list.rda"))
