@@ -48,10 +48,34 @@ model_output_df %>% filter(p.value < 0.05, term != "(Intercept)", component == "
 
 
 
-habitat_contrasts <- emmeans(habitat_fit, pairwise ~ Habitat, data = traits_df)$contrasts %>% as.data.frame()
+# habitat_contrasts <- emmeans(habitat_fit, pairwise ~ Habitat, data = traits_df)$contrasts %>% as.data.frame()
+#
+#
+# trophic_niche_contrasts <- emmeans(lifestyle_fit, pairwise ~ Trophic.Niche, data = traits_df)$contrasts %>% as.data.frame()
+# lifestyle_contrasts <- emmeans(lifestyle_fit, pairwise ~ Primary.Lifestyle, data = traits_df)$contrasts %>% as.data.frame()
 
 
-trophic_niche_contrasts <- emmeans(lifestyle_fit, pairwise ~ Trophic.Niche, data = traits_df)$contrasts %>% as.data.frame()
-lifestyle_contrasts <- emmeans(lifestyle_fit, pairwise ~ Primary.Lifestyle, data = traits_df)$contrasts %>% as.data.frame()
+#######################
+###### Histogram ######
+#######################
 
+percent_hist <- traits_df %>% filter(percent_type == "population") %>%
+  ggplot(aes(percent)) +
+  geom_histogram(color = "#000000", fill = "#82A6B1") +
+  theme_classic() +
+  xlab("Percent of Global Population") +
+  ylab("Species Count") +
+  theme(legend.title = element_blank(),
+        panel.background = element_rect(fill = "transparent",
+                                        colour = NA_character_), # necessary to avoid drawing panel outline
+        panel.grid.major = element_blank(), # get rid of major grid
+        panel.grid.minor = element_blank(), # get rid of minor grid
+        plot.background = element_rect(fill = "transparent",
+                                       colour = NA_character_), # necessary to avoid drawing plot outline
+        legend.background = element_rect(fill = NA, color = NA),
+        legend.box.background = element_rect(fill = NA, color = NA),
+        legend.key = element_rect(fill = "transparent"),
+        legend.box = element_blank()
+  )
 
+ggsave(here::here("figures/percent_pop_hist.png"), percent_hist, width = 15, height = 10, bg = "transparent")
