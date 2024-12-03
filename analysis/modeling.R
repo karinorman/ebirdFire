@@ -60,6 +60,7 @@ model_output_df %>% filter(p.value < 0.05, term != "(Intercept)", component == "
 #######################
 
 percent_hist <- traits_df %>% filter(percent_type == "population") %>%
+  mutate(percent = percent * 100) %>%
   ggplot(aes(percent)) +
   geom_histogram(color = "#000000", fill = "#82A6B1") +
   theme_classic() +
