@@ -102,7 +102,8 @@ quant_rast <- c(richness_quant %>% crop(cbi, mask = TRUE),
          plot_group = ifelse(plot_group %in% c("NA,NA", "1,NA", "2,NA", "3,NA"), NA, plot_group)) %>%
   select(plot_group)
 
-color_assign <- setNames(pals::stevens.greenblue(n = 9)[-c(4,5,6)], c("1,2", "2,2", "3,2", "1,3", "2,3", "3,3"))
+#color_assign <- setNames(pals::stevens.greenblue(n = 9)[-c(4,5,6)], c("1,2", "2,2", "3,2", "1,3", "2,3", "3,3"))
+color_assign <- setNames(c("#fff2c6", "#fed755", "#e1ad01", "#f2dadb", "#d79192", "#BC4749"), c("1,2", "2,2", "3,2", "1,3", "2,3", "3,3"))
 
 color_assign_df <- tibble::enframe(color_assign, name = "plot_group", value = "fill") %>%
   tidyr::separate_wider_delim(plot_group, names = c("metric", "fire"), delim = ",") %>%
