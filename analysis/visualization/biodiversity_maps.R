@@ -12,12 +12,16 @@ library(ggridges)
 # richness_rast <- rast(here::here("data/richness_rast.tif"))
 # lcbd_rast <- rast(here::here("data/lcbd_rast.tiff"))
 
-metric_rast <- rast(here::here("data/metric_rast.tiff"))
-fd_rast <- rast(here::here("data/fd_rast.tiff"))
-
-cbi <- rast(here::here("data/cbi.tif"))
 
 boundary <- terra::vect(here::here("data/study_boundary.shp"))
+
+metric_rast <- rast(here::here("data/metric_rast.tiff")) %>%
+  crop(boundary, mask = TRUE)
+
+fd_rast <- rast(here::here("data/fd_rast.tiff")) %>%
+  crop(boundary, mask = TRUE)
+
+cbi <- rast(here::here("data/cbi.tif"))
 
 ecoregions <- terra::vect(here::here("raw_data/ecoregions/ecoregions_edc.shp")) %>%
   project("epsg:4326")
@@ -176,7 +180,7 @@ ggsave(here::here("figures/richness_cbi_bivar.png"), richness_cbi_bivar, width =
 
 # Plot of just CBI
 cbi_plot <- ggplot() +
-  geom_spatvector(data = US_boundary, color = "black", fill = "white") +
+  geom_spatvector(data = boundary, color = "black", fill = "white") +
   #geom_spatvector(data = ecoregions %>% crop(boundary) %>% terra::aggregate(), color = "black", fill = "white", linewidth = 0.4) +
   geom_spatraster(data = cbi %>%
                     filter(predict.high.severity.fire.final %in% c(1,2)) %>%
@@ -209,36 +213,70 @@ plot_cbi <- cbi %>%
   mutate(predict.high.severity.fire.final =
            as.factor(ifelse(predict.high.severity.fire.final == 0, NA, predict.high.severity.fire.final)))
 
-plot_refugia <- function(metric_col){
-ggplot() +
-  geom_spatvector(data = US_boundary, color = "black", fill = "white") +
-  geom_spatvector(data = as.polygons(cbi) %>% aggregate(), color = "#DDDDDDBF", alpha = 0.5) +
-  geom_spatraster(data = plot_cbi %>% crop(hotspot_rast[[metric_col]], mask = TRUE)) +
-  scale_fill_manual(values = list(`1` = "#82A6B1", `2` =  "#BC4749"), na.value = "#DDDDDDBF", na.translate = FALSE,
-                    labels = c("Refugia", "Areas of Concern")) +
-  theme_void() +
-  theme(legend.title = element_blank(),
-        panel.background = element_rect(fill = "transparent",
-                                        colour = NA_character_), # necessary to avoid drawing panel outline
-        panel.grid.major = element_blank(), # get rid of major grid
-        panel.grid.minor = element_blank(), # get rid of minor grid
-        plot.background = element_rect(fill = "transparent",
-                                       colour = NA_character_), # necessary to avoid drawing plot outline
-        legend.background = element_rect(fill = NA, color = NA),
-        legend.box.background = element_rect(fill = NA, color = NA),
-        legend.key = element_rect(fill = "transparent"),
-        legend.box = element_blank()
-  )
+plot_refugia <- function(metric_col, boundary_shp, mask = FALSE){
+
+  plot <- ggplot() +
+    geom_spatvector(data = boundary_shp, color = "black", fill = "white") +
+    theme_void() +
+    theme(legend.title = element_blank(),
+          panel.background = element_rect(fill = "transparent",
+                                          colour = NA_character_), # necessary to avoid drawing panel outline
+          panel.grid.major = element_blank(), # get rid of major grid
+          panel.grid.minor = element_blank(), # get rid of minor grid
+          plot.background = element_rect(fill = "transparent",
+                                         colour = NA_character_), # necessary to avoid drawing plot outline
+          legend.background = element_rect(fill = NA, color = NA),
+          legend.box.background = element_rect(fill = NA, color = NA),
+          legend.key = element_rect(fill = "transparent"),
+          legend.box = element_blank()
+    )
+
+  if (mask == TRUE){
+    plot <- plot +
+      geom_spatvector(data = cbi %>% crop(boundary_shp, mask = TRUE) %>% as.polygons() %>% aggregate(), color = "#DDDDDDBF", alpha = 0.5) +
+      geom_spatraster(data = plot_cbi %>% crop(hotspot_rast[[metric_col]], mask = TRUE) %>% crop(boundary_shp, mask = TRUE)) +
+      scale_fill_manual(values = list(`1` = "#82A6B1", `2` =  "#BC4749"), na.value = "#DDDDDDBF", na.translate = FALSE,
+                        labels = c("Refugia", "Areas of Concern"))
+  } else{
+    plot <- plot +
+      geom_spatvector(data = as.polygons(cbi) %>% aggregate(), color = "#DDDDDDBF", alpha = 0.5) +
+      geom_spatraster(data = plot_cbi %>% crop(hotspot_rast[[metric_col]], mask = TRUE)) +
+      scale_fill_manual(values = list(`1` = "#82A6B1", `2` =  "#BC4749"), na.value = "#DDDDDDBF", na.translate = FALSE,
+                        labels = c("Refugia", "Areas of Concern"))
+  }
 }
 
-breeding_lcbd_refugia <- plot_refugia("forest_ecoregion_breeding_lcbd")
+breeding_lcbd_refugia <- plot_refugia("forest_ecoregion_breeding_lcbd", boundary_shp = boundary)
 ggsave(here::here("figures/refugia_eco_breeding_lcbd.png"), breeding_lcbd_refugia)
 
-breeding_richness_refugia <- plot_refugia("forest_breeding_richness")
+breeding_richness_refugia <- plot_refugia("forest_breeding_richness", boundary_shp = boundary)
 ggsave(here::here("figures/refugia_breeding_richness.png"), breeding_richness_refugia)
 
-breeding_fric_refugia <- plot_refugia("forest_FRic_breeding")
+breeding_fric_refugia <- plot_refugia("forest_FRic_breeding", boundary_shp = boundary)
 ggsave(here::here("figures/refugia_breeding_fric.png"), breeding_fric_refugia)
+
+### Zoom in on Arizona
+arizona <- rnaturalearth::ne_states(iso_a2 = "US") %>%
+  vect() %>%
+  project("epsg:4326") %>%
+  filter(name == "Arizona")
+
+montana <- rnaturalearth::ne_states(iso_a2 = "US") %>%
+  vect() %>%
+  project("epsg:4326") %>%
+  filter(name == "Montana")
+
+arizona_breeding_lcbd_refugia <- plot_refugia("forest_ecoregion_breeding_lcbd", boundary_shp = arizona, mask = TRUE)
+ggsave(here::here("figures/refugia_pullouts/arizona_refugia_eco_breeding_lcbd.png"), arizona_breeding_lcbd_refugia)
+
+arizona_breeding_richness_refugia <- plot_refugia("forest_breeding_richness", boundary_shp = arizona, mask = TRUE)
+ggsave(here::here("figures/refugia_pullouts/arizona_refugia_breeding_richness.png"), arizona_breeding_richness_refugia)
+
+arizona_breeding_fric_refugia <- plot_refugia("forest_FRic_breeding", boundary_shp = arizona, mask = TRUE)
+ggsave(here::here("figures/refugia_pullouts/arizona_refugia_breeding_fric.png"), arizona_breeding_fric_refugia)
+
+montana_richness_zoom <- plot_refugia("forest_breeding_richness", boundary_shp = montana, mask = TRUE)
+ggsave(here::here("figures/refugia_pullouts/montana_refugia_breeding_richness.png"), montana_richness_zoom, bg = "#DDDDDDBF")
 
 #################################
 ### metric + hotspot maps #######

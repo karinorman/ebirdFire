@@ -26,60 +26,60 @@ ecoregion_rast <- vect(here::here("raw_data/ecoregions/ecoregions_edc.shp")) %>%
 metric_stack <- c(metric_rast, fd_rast, ecoregion_rast) %>%
   crop(., cbi) %>%
   c(., cbi) %>%
-  select(cbi = predict.high.severity.fire.draft, breeding_lcbd, nonbreeding_lcbd, breeding_richness, nonbreeding_richness,
+  select(cbi = predict.high.severity.fire.final, breeding_lcbd, nonbreeding_lcbd, breeding_richness, nonbreeding_richness,
          FRic_breeding, FEve_breeding, FDiv_breeding,
          FRic_nonbreeding, FEve_nonbreeding, FDiv_nonbreeding, ecoregion = ECO_NAME)
 
 metric_stack_df <- as.data.frame(metric_stack, xy = TRUE)
 
 ### Plots a single aggreagate density plot, with tails shaded with darker color
-plot_metric_density <- function(metric_col){
-  col = sym(metric_col)
-
-  means <- metric_stack_df %>%
-    filter(cbi %in% c(1,2)) %>%
-    group_by(cbi) %>%
-    summarize(mean = mean(!!col))
-
-  hold_plt <- metric_stack_df %>%
-    filter(cbi %in% c(1,2)) %>%
-    ggplot(aes(x = !!col, fill = as.factor(cbi))) +
-    geom_density(alpha = 0.25)
-
-  build <- ggplot2::ggplot_build(hold_plt)
-
-  df_breaks <- build$data[[1]] %>%
-    group_by(fill) %>%
-    mutate(cbi = ifelse(fill == "#00BFC4", 1, 2),
-           severity = ifelse(fill == "#00BFC4", "low severity", "high severity")) %>%
-    ungroup() %>%
-    left_join(means) %>%
-    mutate(status = ifelse(x < mean, "low biodiv value", "high biodiv value")) %>%
-    mutate(plot_group = paste(severity, status))
-
-  pal <- list(`low severity low biodiv value` = "#fee48e", `low severity high biodiv value` = "#e1ad01",
-              `high severity low biodiv value` = "#f4afae", `high severity high biodiv value` = "#bd1b19")
-  pal_line <- list(`1` = "#e1ad01", `2` =  "#bd1b19" )
-
-  df_breaks %>%
-    ggplot() +
-    geom_area(
-      aes(x = x, y = density, fill = plot_group), position = "identity", alpha = 0.60, color = "black"
-    ) +
-    scale_fill_manual(values = pal) +
-    guides(fill=guide_legend(title=element_blank())) +
-    theme_classic() +
-    xlab(metric_col) +
-    theme(axis.line.y=element_blank(),
-          axis.text.y=element_blank(),axis.ticks.y=element_blank(),
-          axis.title.y=element_blank()) +
-    geom_vline(aes(xintercept = mean, color = as.factor(cbi))) +
-    scale_color_manual(values = pal_line, guide = "none")
-}
-
-metric_names <- colnames(metric_stack_df)[!colnames(metric_stack_df) %in% c("x", "y", "cbi", "ecoregion")]
-
-map(metric_names,plot_metric_density)
+# plot_metric_density <- function(metric_col){
+#   col = sym(metric_col)
+#
+#   means <- metric_stack_df %>%
+#     filter(cbi %in% c(1,2)) %>%
+#     group_by(cbi) %>%
+#     summarize(mean = mean(!!col))
+#
+#   hold_plt <- metric_stack_df %>%
+#     filter(cbi %in% c(1,2)) %>%
+#     ggplot(aes(x = !!col, fill = as.factor(cbi))) +
+#     geom_density(alpha = 0.25)
+#
+#   build <- ggplot2::ggplot_build(hold_plt)
+#
+#   df_breaks <- build$data[[1]] %>%
+#     group_by(fill) %>%
+#     mutate(cbi = ifelse(fill == "#00BFC4", 1, 2),
+#            severity = ifelse(fill == "#00BFC4", "low severity", "high severity")) %>%
+#     ungroup() %>%
+#     left_join(means) %>%
+#     mutate(status = ifelse(x < mean, "low biodiv value", "high biodiv value")) %>%
+#     mutate(plot_group = paste(severity, status))
+#
+#   pal <- list(`low severity low biodiv value` = "#fee48e", `low severity high biodiv value` = "#e1ad01",
+#               `high severity low biodiv value` = "#f4afae", `high severity high biodiv value` = "#bd1b19")
+#   pal_line <- list(`1` = "#e1ad01", `2` =  "#bd1b19" )
+#
+#   df_breaks %>%
+#     ggplot() +
+#     geom_area(
+#       aes(x = x, y = density, fill = plot_group), position = "identity", alpha = 0.60, color = "black"
+#     ) +
+#     scale_fill_manual(values = pal) +
+#     guides(fill=guide_legend(title=element_blank())) +
+#     theme_classic() +
+#     xlab(metric_col) +
+#     theme(axis.line.y=element_blank(),
+#           axis.text.y=element_blank(),axis.ticks.y=element_blank(),
+#           axis.title.y=element_blank()) +
+#     geom_vline(aes(xintercept = mean, color = as.factor(cbi))) +
+#     scale_color_manual(values = pal_line, guide = "none")
+# }
+#
+ metric_names <- colnames(metric_stack_df)[!colnames(metric_stack_df) %in% c("x", "y", "cbi", "ecoregion")]
+#
+# map(metric_names,plot_metric_density)
 
 
 ### Plot two seperate plots for high and low severity, density plots by ecoregion
@@ -190,6 +190,26 @@ pmap(xlab_df, function(metric_col, xlab){
 
   ggsave(here::here("figures", paste0(metric_col, "density.png")))
 })
+
+# Get just Canadian rockies as an example
+can_rock <- metric_stack_df %>%
+  filter(cbi %in% c(1, 2), ecoregion == "Canadian Rocky Mountains") %>%
+  mutate(fill_var = paste(ecoregion, cbi)) %>%
+  filter(cbi %in% c(1,2)) %>%
+  ggplot(aes(x = breeding_richness, y = ecoregion, fill = factor(fill_var, levels = levels_order))) +
+  geom_density_ridges(quantile_lines = TRUE, alpha = 0.75,
+                      calc_ecdf = TRUE,
+                      #geom = "density_ridges_gradient",
+                      quantiles = c(0.95),
+                      linewidth = .25) +
+  theme_classic() +
+  ylab(element_blank()) +
+  scale_fill_manual(values = pal, guide = "none") +
+  xlab("Breeding Richness") +
+  theme(text = element_text(size = 15)) #+
+  #xlim(0, 175)
+
+ggsave(here::here("figures", "canadian_rocky_density.png"), can_rock, height = 10, width = 6)
 
 ### Plot Map
 ecoregion_vect <- vect(here::here("raw_data/ecoregions/ecoregions_edc.shp")) %>%
