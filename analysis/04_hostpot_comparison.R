@@ -50,6 +50,14 @@ forest_hotspots <- c(cbi, metric_rast) %>%
   rast(.,  type="xyz", crs = "epsg:4326") %>%
   rename_with(~paste0("forest_", .x))
 
+forest_quantile_cutoffs <- c(cbi, metric_rast) %>%
+  filter(predict.high.severity.fire.final %in% c(1,2)) %>%
+  terra::as.data.frame(., xy = FALSE) %>%
+  select(-predict.high.severity.fire.final) %>%
+  group_by(ECO_NAME) %>%
+  summarize(across(everything(), ~quantile(.x, probs = 0.95, na.rm = TRUE))) %>%
+  ungroup()
+
 hotspot_rasts <- c(ecoregion_hotspots, forest_hotspots) %>%
   select(-forest_predict.high.severity.fire.final)
 

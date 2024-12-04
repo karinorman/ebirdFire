@@ -164,14 +164,20 @@ pmap(xlab_df, function(metric_col, xlab){
   col = sym(metric_col)
 
   metric_stack_df %>%
+    filter(!ecoregion %in% c("West Cascades", "Sierra Nevada", "Okanagan", "Klamath Mountains", "Great Basin",
+                             "East Cascades - Modoc Plateau", "Columbia Plateau",
+                             "California South Coast", "California Central Coast",
+                             "Northern Great Plains Steppe", "California North Coast")) %>%
     filter(cbi %in% c(1, 2)) %>%
     mutate(fill_var = paste(ecoregion, cbi)) %>%
     filter(cbi %in% c(1,2)) %>%
     ggplot(aes(x = !!col, y = ecoregion, fill = factor(fill_var, levels = levels_order))) +
-    geom_density_ridges(quantile_lines = TRUE, alpha = 0.75,
-                        calc_ecdf = TRUE,
+    geom_density_ridges(#quantile_lines = TRUE,
+      alpha = 0.75,
+                        #calc_ecdf = TRUE,
                         #geom = "density_ridges_gradient",
-                        quantiles = c(0.95)) +
+                        #quantiles = c(0.95)
+      ) +
     theme_classic() +
     ylab(element_blank()) +
     scale_fill_manual(values = pal, guide = "none") +
@@ -197,10 +203,10 @@ can_rock <- metric_stack_df %>%
   mutate(fill_var = paste(ecoregion, cbi)) %>%
   filter(cbi %in% c(1,2)) %>%
   ggplot(aes(x = breeding_richness, y = ecoregion, fill = factor(fill_var, levels = levels_order))) +
-  geom_density_ridges(quantile_lines = TRUE, alpha = 0.75,
-                      calc_ecdf = TRUE,
-                      #geom = "density_ridges_gradient",
-                      quantiles = c(0.95),
+  geom_density_ridges(#quantile_lines = TRUE, alpha = 0.75,
+  #                     calc_ecdf = TRUE,
+  #                     #geom = "density_ridges_gradient",
+  #                     quantiles = c(0.95),
                       linewidth = .25) +
   theme_classic() +
   ylab(element_blank()) +
