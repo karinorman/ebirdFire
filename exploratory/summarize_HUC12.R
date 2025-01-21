@@ -6,10 +6,11 @@ library(tidyterra)
 # read in data
 boundary <- vect(here::here("data/study_boundary.shp"))
 cbi <- rast(here::here("data/cbi.tif"))
-cbi_forest <- cbi %>%
-  filter(predict.high.severity.fire.final %in% c(1,2)) %>%
-  as.polygons() %>%
-  aggregate()
+
+# cbi_forest <- cbi %>%
+#   filter(predict.high.severity.fire.final %in% c(1,2)) %>%
+#   as.polygons() %>%
+#   aggregate()
 
 boundary_states <- rnaturalearth::ne_states(iso_a2 = "US") %>%
   vect() %>%
@@ -18,12 +19,12 @@ boundary_states <- rnaturalearth::ne_states(iso_a2 = "US") %>%
                      "Montana", "Arizona", "Utah", "Wyoming", "Colorado", "New Mexico", "Texas")) %>%
   crop(boundary)
 
-HUC12_uncrop <- vect(here::here("raw_data/WBD_HUC12_CONUS_pulled10262020/WBD_HUC12_CONUS_pulled10262020.shp")) %>%
-  project("epsg:4326")
-
-HUC12_forest <- vect(here::here("raw_data/WBD_HUC12_CONUS_pulled10262020/WBD_HUC12_CONUS_pulled10262020.shp")) %>%
-  project("epsg:4326") %>%
-  crop(cbi_forest)
+# HUC12_uncrop <- vect(here::here("raw_data/WBD_HUC12_CONUS_pulled10262020/WBD_HUC12_CONUS_pulled10262020.shp")) %>%
+#   project("epsg:4326")
+# #
+# HUC12_forest <- vect(here::here("raw_data/WBD_HUC12_CONUS_pulled10262020/WBD_HUC12_CONUS_pulled10262020.shp")) %>%
+#   project("epsg:4326") %>%
+#   crop(cbi_forest)
 
 metric_rast <- rast(here::here("data/metric_rast.tiff"))
 fd_rast <- rast(here::here("data/fd_rast.tiff"))
@@ -140,7 +141,7 @@ ecoregion_hotspot_zonal_vec <- HUC12 %>% select(huc12) %>%
   ungroup())
 
 writeVector(biodiv_zonal_vec, here::here("data/biodiv_zonal.shp"))
-writeVector(ecoregion_hotspot_zonal_vec, here::here("data/ecoregion"))
+writeVector(ecoregion_hotspot_zonal_vec, here::here("data/ecoregion_hotspots_huc12.shp"))
 
 test_plot <- ggplot() +
   #geom_spatvector(data = boundary, color = "black", fill = "white") +
@@ -150,11 +151,6 @@ test_plot <- ggplot() +
   viridis::scale_color_viridis()
 
 ggsave(here::here("figures/test_map.jpeg"), test_plot)
-#
-# hotspot_plot <- ggplot() +
-#   geom_spatvector(data = hotspot_zonal_vec, aes(fill = breeding_richness, color = breeding_richness))
-#
-# ggsave(here::here("figures/huc12_hotspot.jpeg"), hotspot_plot)
 
 ecoregion_hotspot_plot <- ggplot() +
   geom_spatvector(data = boundary_states, color = "black", fill = "white") +
@@ -168,10 +164,10 @@ ecoregion_hotspot_plot <- ggplot() +
 
 ggsave(here::here("figures/huc12_ecoregion_hotspot.jpeg"), ecoregion_hotspot_plot)
 
-ggplot() +
-  geom_spatvector(data = cbi %>% crop(boundary, mask = TRUE) %>% as.polygons() %>% aggregate(), color = "#DDDDDDBF", alpha = 0.5) +
-  geom_spatvector(data = huc12_cbi_modal_vect %>% filter(predict.high.severity.fire.final %in% c(1,2)), color = "black") +
-  theme_void()
+# ggplot() +
+#   geom_spatvector(data = cbi %>% crop(boundary, mask = TRUE) %>% as.polygons() %>% aggregate(), color = "#DDDDDDBF", alpha = 0.5) +
+#   geom_spatvector(data = huc12_cbi_modal_vect %>% filter(predict.high.severity.fire.final %in% c(1,2)), color = "black") +
+#   theme_void()
 
 # plot an example watershed
 watershed = "180201530301"
