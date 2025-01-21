@@ -61,6 +61,7 @@ ecoregion_labels <- zonal(ecoregion_rast, HUC12, fun = "modal", na.rm = TRUE) %>
 #   geom_spatvector(data = mtbs)
 
 # get frequency of CBI values within polygons to figure out what kind of hotspot they are
+# want to exclude ecoregions that are majority non-forested (either cbi == 0 or NA)
 huc12_cbi_modal_vect <- zonal(cbi, HUC12, fun = "modal", na.rm = TRUE, as.polygons = TRUE)
 
 # get the break down of CBI types within each huc12 to classify what kind of hotspot it is
