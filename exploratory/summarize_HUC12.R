@@ -7,18 +7,6 @@ library(tidyterra)
 boundary <- vect(here::here("data/study_boundary.shp"))
 cbi <- rast(here::here("data/cbi.tif"))
 
-# cbi_forest <- cbi %>%
-#   filter(predict.high.severity.fire.final %in% c(1,2)) %>%
-#   as.polygons() %>%
-#   aggregate()
-
-boundary_states <- rnaturalearth::ne_states(iso_a2 = "US") %>%
-  vect() %>%
-  project("epsg:4326") %>%
-  filter(name %in% c("Washington", "Oregon", "California", "Idaho", "Nevada",
-                     "Montana", "Arizona", "Utah", "Wyoming", "Colorado", "New Mexico", "Texas")) %>%
-  crop(boundary)
-
 HUC12_uncrop <- vect(here::here("raw_data/WBD_HUC12_CONUS_pulled10262020/WBD_HUC12_CONUS_pulled10262020.shp")) %>%
   project("epsg:4326") %>%
   crop(boundary)
