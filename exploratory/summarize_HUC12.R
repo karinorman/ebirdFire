@@ -127,8 +127,8 @@ hotspot_zonal_vec <- biodiv_zonal_vec %>%
 
 ecoregion_hotspot_zonal_vec <- HUC12 %>% select(huc12) %>%
   right_join(biodiv_zonal %>%
-  ## A WATERSHED CAN BE A HOTSPOT IF AT LEAST 30% IS FORESTED ##
-  filter(!is.na(ECO_NAME), !is.na(max_severity), forest_total > 0.5) %>%
+  ## A WATERSHED CAN BE A HOTSPOT IF AT LEAST 20% IS FORESTED ##
+  filter(!is.na(ECO_NAME), !is.na(max_severity), forest_total > 0.20) %>%
   group_by(ECO_NAME) %>%
   mutate(across(-c(huc12, fire, low_sev, high_sev, no_data, unforested, max_severity, forest_total),
                 ~ifelse(.x > quantile(.x, probs = 0.95, na.rm = TRUE), 1, NA)),
@@ -154,6 +154,7 @@ ggsave(here::here("figures/test_map.jpeg"), test_plot)
 
 ecoregion_hotspot_plot <- ggplot() +
   geom_spatvector(data = boundary_states, color = "black", fill = "white") +
+  geom_spatvector(data = cbi_forest, fill = "#DDDDDDBF", color = "transparent", alpha = 0.4) +
   geom_spatvector(data = ecoregion_hotspot_zonal_vec %>%
                     filter(breeding_richness == 1),
                   aes(fill = hotspot_type, color = hotspot_type)) +
