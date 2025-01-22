@@ -19,8 +19,9 @@ boundary_states <- rnaturalearth::ne_states(iso_a2 = "US") %>%
                      "Montana", "Arizona", "Utah", "Wyoming", "Colorado", "New Mexico", "Texas")) %>%
   crop(boundary)
 
-# HUC12_uncrop <- vect(here::here("raw_data/WBD_HUC12_CONUS_pulled10262020/WBD_HUC12_CONUS_pulled10262020.shp")) %>%
-#   project("epsg:4326")
+HUC12_uncrop <- vect(here::here("raw_data/WBD_HUC12_CONUS_pulled10262020/WBD_HUC12_CONUS_pulled10262020.shp")) %>%
+  project("epsg:4326") %>%
+  crop(boundary)
 # #
 # HUC12_forest <- vect(here::here("raw_data/WBD_HUC12_CONUS_pulled10262020/WBD_HUC12_CONUS_pulled10262020.shp")) %>%
 #   project("epsg:4326") %>%
@@ -97,9 +98,9 @@ huc_cbi_perc <- extract(cbi, HUC12) %>%
 #biodiv_cbi_huc12 <- biodiv_zonal_vec %>% filter(huc12 %in% huc_cbi_perc$huc12) %>% left_join(huc_cbi_perc)
 
 # get HUC12 level means of biodiversity metrics
-biodiv_zonal <- zonal(biodiv_rast, HUC12, fun = "mean", na.rm = TRUE) %>%
-  cbind(huc12 = HUC12$huc12, .) %>%
-  right_join(ecoregion_labels) %>%
+biodiv_zonal <- zonal(biodiv_rast, HUC12_uncrop, fun = "mean", na.rm = TRUE) %>%
+  cbind(huc12 = HUC12_uncrop$huc12, .) %>%
+  left_join(ecoregion_labels) %>%
   left_join(values(huc12_cbi_modal_vect) %>% select(huc12, fire = predict.high.severity.fire.final)) %>%
   left_join(huc_cbi_perc) %>%
   mutate(max_severity = case_when(
@@ -110,13 +111,13 @@ biodiv_zonal <- zonal(biodiv_rast, HUC12, fun = "mean", na.rm = TRUE) %>%
   mutate(forest_total = sum(low_sev, high_sev, na.rm = TRUE))
 
 # rejoin with polygon labels and geometry
-biodiv_zonal_vec <- HUC12 %>% select(huc12) %>%
+biodiv_zonal_vec <- HUC12_uncrop %>% select(huc12) %>%
   right_join(biodiv_zonal)
 
 # get spatvector of hotspots for each metric
 hotspot_zonal_vec <- biodiv_zonal_vec %>%
   # get hotspots only in forested areas
-  filter(!is.na(max_severity), forest_total > 0.3) %>%
+  filter(!is.na(ECO_NAME), !is.na(max_severity), forest_total > 0.3) %>%
   mutate(across(-c(huc12, ECO_NAME, fire, low_sev, high_sev, no_data, unforested, max_severity, forest_total),
                 ~ifelse(.x > quantile(.x, probs = 0.95, na.rm = TRUE), 1, NA)),
          hotspot_type = case_when(
@@ -143,34 +144,7 @@ ecoregion_hotspot_zonal_vec <- HUC12 %>% select(huc12) %>%
 writeVector(biodiv_zonal_vec, here::here("data/biodiv_zonal.shp"))
 writeVector(ecoregion_hotspot_zonal_vec, here::here("data/ecoregion_hotspots_huc12.shp"))
 
-test_plot <- ggplot() +
-  #geom_spatvector(data = boundary, color = "black", fill = "white") +
-  geom_spatvector(data = biodiv_zonal_vec, aes(fill = breeding_richness, color = breeding_richness)) +
-  theme_void() +
-  viridis::scale_fill_viridis() +
-  viridis::scale_color_viridis()
-
-ggsave(here::here("figures/test_map.jpeg"), test_plot)
-
-ecoregion_hotspot_plot <- ggplot() +
-  geom_spatvector(data = boundary_states, color = "black", fill = "white") +
-  geom_spatvector(data = cbi_forest, fill = "#DDDDDDBF", color = "transparent", alpha = 0.4) +
-  geom_spatvector(data = ecoregion_hotspot_zonal_vec %>%
-                    filter(breeding_richness == 1),
-                  aes(fill = hotspot_type, color = hotspot_type)) +
-  theme_void() +
-  scale_fill_manual(values = list(`Refugia` = "#82A6B1", `Area of Concern` =  "#BC4749", `Mixed` = "#D5A021"), na.value = "transparent") +
-  scale_color_manual(values = list(`Refugia` = "#82A6B1", `Area of Concern` =  "#BC4749", `Mixed` = "#D5A021"), na.value = "transparent") +
-  theme(legend.title=element_blank())
-
-ggsave(here::here("figures/huc12_ecoregion_hotspot.jpeg"), ecoregion_hotspot_plot)
-
-# ggplot() +
-#   geom_spatvector(data = cbi %>% crop(boundary, mask = TRUE) %>% as.polygons() %>% aggregate(), color = "#DDDDDDBF", alpha = 0.5) +
-#   geom_spatvector(data = huc12_cbi_modal_vect %>% filter(predict.high.severity.fire.final %in% c(1,2)), color = "black") +
-#   theme_void()
-
-# plot an example watershed
+# plot an example watershed for debugging
 watershed = "180201530301"
 ggplot() +
   geom_spatraster(data = cbi %>% mutate(predict.high.severity.fire.final = as.factor(predict.high.severity.fire.final)) %>% crop(HUC12_uncrop %>% filter(huc12 == watershed))) +
