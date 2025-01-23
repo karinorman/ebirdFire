@@ -134,44 +134,57 @@ plot_grouped_ridgelines <- function(metric_col){
 
 map(metric_names, plot_grouped_ridgelines)
 
+#### Custom palette for each ecoregion ####
 
-## Plots with custom palette
-pal <- list(`Canadian Rocky Mountains 2` = "#CC6677", `Canadian Rocky Mountains 1` = "#ebc2c9",
-            `Middle Rockies - Blue Mountains 1` = "#c6beef", `Middle Rockies - Blue Mountains 2` = "#332288",
-            `Utah-Wyoming Rocky Mountains 1` = "#3ee375", `Utah-Wyoming Rocky Mountains 2` = "#117733",
-            `Southern Rocky Mountains 1` = "#d2ecf9", `Southern Rocky Mountains 2` = "#88CCEE",
-            `Utah High Plateaus 1` = "#db6fa5", `Utah High Plateaus 2` = "#882255",
-            `Colorado Plateau 1` = "#b7e2db", `Colorado Plateau 2` = "#44AA99",
-            `Arizona-New Mexico Mountains 1` = "#e3e3aa", `Arizona-New Mexico Mountains 2` = "#999933",
-            `Apache Highlands 1` = "#e9c9e4", `Apache Highlands 2` = "#AA4499")
+#get palette values
+pal <- Polychrome::kelly.colors(22)
+pal <- within(as.list(pal), rm(white, black))
 
-levels_order <- c("Canadian Rocky Mountains 2","Canadian Rocky Mountains 1",
-                  "Middle Rockies - Blue Mountains 2","Middle Rockies - Blue Mountains 1",
-                  "Utah-Wyoming Rocky Mountains 2", "Utah-Wyoming Rocky Mountains 1",
-                  "Southern Rocky Mountains 2", "Southern Rocky Mountains 1",
-                  "Utah High Plateaus 2", "Utah High Plateaus 1",
-                  "Colorado Plateau 2", "Colorado Plateau 1",
-                  "Arizona-New Mexico Mountains 2" ,"Arizona-New Mexico Mountains 1",
-                  "Apache Highlands 2", "Apache Highlands 1")
+ecoregion_names <- na.omit(unique(metric_stack_df$ecoregion))
 
-# Example with colors by ecoregion with shaded tails
+# create dataframe with ecoregion names, palette assignment, and programatically get lighter value of palette
+pal_df <- tibble(ecoregion_names) %>%
+  # alphabetical order
+  arrange(ecoregion_names) %>%
+  # assign palette in order
+  mutate(pal = unlist(pal[row_number()])) %>%
+  rowwise() %>%
+  # get lighter palette value
+  mutate(pal_light = colorspace::lighten(pal, 0.6, space = "HLS"),
+         ecoregion_dark = paste(ecoregion_names, "2"),
+         ecoregion_light = paste(ecoregion_names, "1"))
+
+# dataframe to named list that can be passed to the manual fill in ggplot
+pal_list <- c(tibble::deframe(pal_df %>% select(ecoregion_dark, pal)),
+              tibble::deframe(pal_df %>% select(ecoregion_light, pal_light)))
+
+# want to maintain order or fill assignment, get list to enforce order
+levels_order <- pal_df %>% select(ecoregion_light, ecoregion_dark) %>% t %>% as.list()
+
+# dataframe with metrics and their x label
 xlab_df <- data.frame(metric_col = metric_names[metric_names != "ecoregion"],
                       xlab = c("Breeding LCBD", "Nonbreeding LCBD", "Breeding Richness", "Nonbreeding Richness",
                                "Breeding Functional Richness", "Breeding Functional Evenness", "Breeding Functional Divergence",
                                "Nonbreeding Functional Richness", "Nonbreeding Functional Evenness", "Nonbreeding Functional Divergence"))
 
-pmap(xlab_df, function(metric_col, xlab){
+density_plot_list <- pmap(xlab_df %>%
+                            # modify arguments slightly for final figure, add which plot get's y axis
+                            filter(metric_col %in% c("breeding_richness", "breeding_lcbd", "FRic_breeding")) %>%
+                            arrange(match(metric_col, c("breeding_richness", "breeding_lcbd", "FRic_breeding"))) %>%
+                            bind_cols(y_axis = c(TRUE, FALSE, FALSE)) %>%
+                            mutate(xlab = c("Species Richness", "LCBD", "Functional Richness")),
+                          function(metric_col, xlab, y_axis){
   col = sym(metric_col)
 
-  metric_stack_df %>%
-    filter(!ecoregion %in% c("West Cascades", "Sierra Nevada", "Okanagan", "Klamath Mountains", "Great Basin",
-                             "East Cascades - Modoc Plateau", "Columbia Plateau",
-                             "California South Coast", "California Central Coast",
-                             "Northern Great Plains Steppe", "California North Coast")) %>%
+  plt <- metric_stack_df %>%
+    #filter(!ecoregion %in% c("West Cascades", "Sierra Nevada", "Okanagan", "Klamath Mountains", "Great Basin",
+                             # "East Cascades - Modoc Plateau", "Columbia Plateau",
+                             # "California South Coast", "California Central Coast",
+                             # "Northern Great Plains Steppe", "California North Coast")) %>%
     filter(cbi %in% c(1, 2)) %>%
     mutate(fill_var = paste(ecoregion, cbi)) %>%
     filter(cbi %in% c(1,2)) %>%
-    ggplot(aes(x = !!col, y = ecoregion, fill = factor(fill_var, levels = levels_order))) +
+    ggplot(aes(x = !!col, y = forcats::fct_rev(factor(ecoregion, levels = pal_df$ecoregion_names)), fill = factor(fill_var, levels = levels_order))) +
     geom_density_ridges(#quantile_lines = TRUE,
       alpha = 0.75,
                         #calc_ecdf = TRUE,
@@ -180,7 +193,7 @@ pmap(xlab_df, function(metric_col, xlab){
       ) +
     theme_classic() +
     ylab(element_blank()) +
-    scale_fill_manual(values = pal, guide = "none") +
+    scale_fill_manual(values = pal_list, guide = "none") +
     ## code below adds a color to the shaded tails
     # new_scale_fill() +
     # stat_density_ridges(aes(fill = stat(quantile)), quantile_lines = TRUE,
@@ -192,35 +205,43 @@ pmap(xlab_df, function(metric_col, xlab){
     #                   labels = c("low biodiversity", "area of concern"),
     #                   guide = "none") +
     xlab(xlab) +
-    theme(text = element_text(size = 15))
+    theme(text = element_text(size = 10))
 
-  ggsave(here::here("figures", paste0(metric_col, "density.png")))
+  if (y_axis == FALSE){
+  plt <- plt +
+    theme(axis.line.y = element_blank(),
+          axis.text.y = element_blank(),
+          axis.ticks.y = element_blank())
+  }
+
+  return(plt)
+
+  #ggsave(here::here("figures", paste0(metric_col, "density.png")))
 })
 
-# Get just Canadian rockies as an example
-can_rock <- metric_stack_df %>%
-  filter(cbi %in% c(1, 2), ecoregion == "Canadian Rocky Mountains") %>%
-  mutate(fill_var = paste(ecoregion, cbi)) %>%
-  filter(cbi %in% c(1,2)) %>%
-  ggplot(aes(x = breeding_richness, y = ecoregion, fill = factor(fill_var, levels = levels_order))) +
-  geom_density_ridges(#quantile_lines = TRUE, alpha = 0.75,
-  #                     calc_ecdf = TRUE,
-  #                     #geom = "density_ridges_gradient",
-  #                     quantiles = c(0.95),
-                      linewidth = .25) +
-  theme_classic() +
-  ylab(element_blank()) +
-  scale_fill_manual(values = pal, guide = "none") +
-  xlab("Breeding Richness") +
-  theme(text = element_text(size = 15)) #+
-  #xlim(0, 175)
+density_plt_join <- patchwork::wrap_plots(density_plot_list, nrow = 1, axes = "collect_y")
 
-ggsave(here::here("figures", "canadian_rocky_density.png"), can_rock, height = 10, width = 6)
+# # Get just Canadian rockies as an example
+# can_rock <- metric_stack_df %>%
+#   filter(cbi %in% c(1, 2), ecoregion == "Canadian Rocky Mountains") %>%
+#   mutate(fill_var = paste(ecoregion, cbi)) %>%
+#   filter(cbi %in% c(1,2)) %>%
+#   ggplot(aes(x = breeding_richness, y = ecoregion, fill = factor(fill_var, levels = levels_order))) +
+#   geom_density_ridges(#quantile_lines = TRUE, alpha = 0.75,
+#   #                     calc_ecdf = TRUE,
+#   #                     #geom = "density_ridges_gradient",
+#   #                     quantiles = c(0.95),
+#                       linewidth = .25) +
+#   theme_classic() +
+#   ylab(element_blank()) +
+#   scale_fill_manual(values = pal, guide = "none") +
+#   xlab("Breeding Richness") +
+#   theme(text = element_text(size = 15)) #+
+#   #xlim(0, 175)
+#
+# ggsave(here::here("figures", "canadian_rocky_density.png"), can_rock, height = 10, width = 6)
 
-### Plot Map
-ecoregion_vect <- vect(here::here("raw_data/ecoregions/ecoregions_edc.shp")) %>%
-  project("epsg:4326")
-
+### Ecoregion Map with color assignments ###
 US_boundary <- rnaturalearth::ne_states(iso_a2 = "US") %>%
   vect() %>%
   project("epsg:4326") %>%
@@ -228,19 +249,20 @@ US_boundary <- rnaturalearth::ne_states(iso_a2 = "US") %>%
                      "Montana", "Arizona", "Utah", "Wyoming", "Texas", "Colorado", "New Mexico")) %>%
   crop(ext(c(-130, -103.5, 18, 50)))
 
-inc_ecoregion <- metric_stack_df %>%
-  filter(cbi %in% c(1, 2)) %>%
-  pull(ecoregion) %>% unique()
+ecoregion_vect <- vect(here::here("raw_data/ecoregions/ecoregions_edc.shp")) %>%
+  project("epsg:4326") %>%
+  crop(US_boundary)
 
 ecoregion_map <- ggplot() +
   geom_spatvector(data = US_boundary, color = "black", fill = "transparent", alpha = 0.5) +
-  geom_spatvector(data = ecoregion_vect %>% filter(ECO_NAME %in% inc_ecoregion),
+  geom_spatvector(data = ecoregion_vect,
                   aes(fill = factor(ECO_NAME)),
                   color = "black", linewidth = 0.4) +
-  scale_fill_manual(values = list(`Canadian Rocky Mountains` = "#CC6677", `Middle Rockies - Blue Mountains` = "#332288",
-                                  `Utah-Wyoming Rocky Mountains` = "#117733", `Southern Rocky Mountains` = "#88CCEE",
-                                  `Utah High Plateaus` = "#882255", `Colorado Plateau` = "#44AA99", `Arizona-New Mexico Mountains` = "#999933",
-                                  `Apache Highlands` = "#AA4499"), drop = F, name = NULL) +
+  scale_fill_manual(values = tibble::deframe(pal_df %>% select(ecoregion_names, pal)), drop = F, name = NULL, guide = "none") +
   theme_void()
 
-ggsave(here::here("figures/ecoregion_map.png"), ecoregion_map)
+#ggsave(here::here("figures/ecoregion_map.png"), ecoregion_map)
+
+# Add density plots and map, save
+density_map <- density_plt_join + ecoregion_map + plot_layout(heights = c(2, 1.6))
+ggsave(here::here("figures/density_map.jpeg"), density_map, width = 15, height = 8)
