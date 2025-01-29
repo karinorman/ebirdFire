@@ -94,4 +94,4 @@ percent_hist <- traits_df %>%
         legend.box = element_blank()
   )
 
-ggsave(here::here("figures/percent_pop_hist.png"), percent_hist, width = 15, height = 10, bg = "transparent")
+ggsave(here::here("figures/percent_pop_hist.png"), percent_hist, width = 17, height = 10, bg = "transparent")
