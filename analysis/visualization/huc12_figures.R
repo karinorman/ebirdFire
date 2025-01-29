@@ -6,6 +6,8 @@ library(viridis)
 library(scales)
 library(cowplot)
 library(purrr)
+library(ggplot2)
+library(patchwork)
 
 # read in CBI raster
 cbi <- rast(here::here("data/cbi.tif"))
@@ -25,8 +27,14 @@ boundary_states <- rnaturalearth::ne_states(iso_a2 = "US") %>%
 
 # shapefiles of biodiversity metrics and hotspots
 biodiv_zonal_vec <- vect(here::here("data/biodiv_zonal.shp"))
-ecoregion_hotspot_zonal_vec <- vect(here::here("data/ecoregion_hotspots_huc12.shp"))
+names(biodiv_zonal_vec) <- c("huc12", "breeding_lcbd", "nonbreeding_lcbd", "ecoregion_breeding_lcbd", "ecoregion_nonbreeding_lcbd", "breeding_richness",
+                             "nonbreeding_richness", "FRic_breeding", "FEve_breeding", "FDiv_breeding", "FRic_nonbreeding", "FEve_nonbreeding", "FDiv_nonbreeding",
+                             "ECO_NAME", "fire", "ID", "low_sev", "high_sev", "unforested", "no_data", "max_severity", "forest_total")
 
+ecoregion_hotspot_zonal_vec <- vect(here::here("data/ecoregion_hotspots_huc12.shp"))
+names(ecoregion_hotspot_zonal_vec) <- c("huc12", "breeding_lcbd", "nonbreeding_lcbd", "ecoregion_breeding_lcbd", "ecoregion_nonbreeding_lcbd", "breeding_richness",
+                                        "nonbreeding_richness", "FRic_breeding", "FEve_breeding", "FDiv_breeding", "FRic_nonbreeding", "FEve_nonbreeding", "FDiv_nonbreeding",
+                                        "ECO_NAME", "fire", "ID", "low_sev", "high_sev", "unforested", "no_data", "max_severity", "forest_total", "hotspot_type")
 ###############################
 ### Biodiversity Metric Map ###
 ###############################
@@ -38,12 +46,12 @@ ecoregion_hotspot_zonal_vec <- vect(here::here("data/ecoregion_hotspots_huc12.sh
 #
 # test_rast <- biodiv_zonal_vec %>% crop(co_bound)
 
-ggplot() +
-  #geom_spatvector(data = boundary, color = "black", fill = "white") +
-  geom_spatvector(data = biodiv_zonal_vec, aes(fill = breeding_richness, color = breeding_richness)) +
-  theme_void() +
-  viridis::scale_fill_viridis() +
-  viridis::scale_color_viridis()
+# ggplot() +
+#   #geom_spatvector(data = boundary, color = "black", fill = "white") +
+#   geom_spatvector(data = biodiv_zonal_vec, aes(fill = breeding_richness, color = breeding_richness)) +
+#   theme_void() +
+#   viridis::scale_fill_viridis() +
+#   viridis::scale_color_viridis()
 
 plot_metric_map <- function(data, metric_col, legend_title){
 
@@ -68,7 +76,7 @@ plot_metric_map <- function(data, metric_col, legend_title){
 }
 
 
-metric_plot_df <- tibble(metric_col = c("breeding_richness", "breeding_lcbd", "FRic_breeding"), legend_title = c("Richness", "LCBD", "Functional \nRichness"))
+metric_plot_df <- tibble(metric_col = c("breeding_richness", "ecoregion_breeding_lcbd", "FRic_breeding"), legend_title = c("Richness", "LCBD", "Functional \nRichness"))
 
 metric_plot_list <- pmap(metric_plot_df, plot_metric_map, data = biodiv_zonal_vec)
 
@@ -107,7 +115,7 @@ plot_hotspot_types <- function(data, metric_col){
 }
 
 
-hotspot_plot_list <- map(c("breeding_richness", "breeding_lcbd", "FRic_breeding"), plot_hotspot_types, data = ecoregion_hotspot_zonal_vec)
+hotspot_plot_list <- map(c("breeding_richness", "ecoregion_breeding_lcbd", "FRic_breeding"), plot_hotspot_types, data = ecoregion_hotspot_zonal_vec)
 
 hotspot_type_figure <- patchwork::wrap_plots(hotspot_plot_list, nrow = 1, guides = "collect") +
   plot_annotation(tag_levels = "A")
