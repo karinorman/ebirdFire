@@ -15,21 +15,31 @@ traits_df <- species_range_metrics %>%
   select(-c(scientific.name, taxon_concept_id, avonet_sciname,
             avonet_taxon_concept_id, avonet_family, avonet_order,
             total_area, wus_area, wus_percent, sev_area)) %>%
-  left_join(pop_mets %>% select(species_code, pop_percent = percent)) %>%
-  rename(range = high_sev_percent, population = pop_percent) %>%
+  left_join(pop_mets %>% select(species_code, ends_with ("_percent"), type))
+
+model_data <- traits_df %>%
+  filter(forest_percent > 0.1) %>%
+  rename(range = high_sev_percent, population = sev_forest_percent) %>%
   pivot_longer(cols = c(range, population), names_to = "percent_type", values_to = "percent")
 
 
-fit_beta <- function(percent_type, model_id, formula){
+fit_beta <- function(percent_type, model_id, formula, type){
+
+  if (type == "breeding"){
+    df <- model_data %>% filter(type %in% c("breeding", "resident"))
+  } else {
+    df <- model_data %>% filter(type %in% c("nonbreeding", "resident"))
+  }
 
   fit <- betareg(formula = formula,
-                 data = traits_df %>% filter(percent_type == !!percent_type), link = "logit")
+                 data = df %>% filter(percent_type == !!percent_type), link = "logit")
 
-  df <- broom::tidy(fit) %>%
+  output_df <- broom::tidy(fit) %>%
     mutate(percent_type = percent_type,
-           model_id = model_id)
+           model_id = model_id,
+           type = type)
 
-  return(list(df, fit))
+  return(list(output_df, fit))
 }
 
 
@@ -39,12 +49,16 @@ model_df <- data.frame(percent_type = rep(c("range", "population"), 3),
                                        "percent ~ Habitat.Density + Habitat",
                                        "percent ~ Migration + Trophic.Niche + Primary.Lifestyle"), each = 2))
 
-model_output <- purrr::pmap(model_df, fit_beta)
+model_df <- bind_rows(model_df %>% mutate(type = "breeding"),
+                      model_df %>% mutate(type = "nonbreeding"))
+
+model_output <- purrr::pmap(model_df[1:10,], fit_beta)
 
 model_output_df <- map(model_output, 1) %>% bind_rows()
 model_fits <- map(model_output_df, 2)
 
-model_output_df %>% filter(p.value < 0.05, term != "(Intercept)", component == "mu") %>% View()
+# shorter beaks are more likely to be in high severity, and birds that like high density
+model_output_df %>% filter(p.value < 0.05, term != "(Intercept)", component %in% c("mu", "mean"), percent_type == "population") %>% View()
 
 
 
@@ -58,9 +72,10 @@ model_output_df %>% filter(p.value < 0.05, term != "(Intercept)", component == "
 #######################
 ###### Histogram ######
 #######################
+library(ggplot2)
 
-percent_hist <- traits_df %>% filter(percent_type == "population") %>%
-  mutate(percent = percent * 100) %>%
+percent_hist <- traits_df %>%
+  mutate(percent = total_percent * 100) %>%
   ggplot(aes(percent)) +
   geom_histogram(color = "#000000", fill = "#82A6B1") +
   theme_classic() +

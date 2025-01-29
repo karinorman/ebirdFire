@@ -1,5 +1,4 @@
 library(dplyr)
-library(ebirdst)
 library(rnaturalearth)
 library(sf)
 library(terra)
@@ -81,6 +80,6 @@ pop_mets <- breeding_pop_mets %>%
               mutate(type = "resident")) %>%
   mutate(total_percent = sev_pop/total_pop,
          forest_percent = forest_pop/total_pop,
-         wus_percent = sev_pop/wus_pop)
+        sev_forest_percent = sev_pop/forest_pop)
 
 usethis::use_data(pop_mets)
