@@ -41,7 +41,7 @@ HUC12 <- vect(here::here("raw_data/WBD_HUC12_CONUS_pulled10262020/WBD_HUC12_CONU
 #   group_by(ID) %>%
 #   # get label associated with the modal intersection
 #   slice(which.max(n)) %>%
-#   ungroup() %>%
+#   ungroup() %>%.
 #   left_join(tibble(huc12 = HUC12$huc12) %>% mutate(ID = row_number())) %>%
 #   select(huc12, ECO_NAME)
 
