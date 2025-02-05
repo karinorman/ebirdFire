@@ -102,22 +102,27 @@ biodiv_zonal <- zonal(biodiv_rast, HUC12_uncrop, fun = "mean", na.rm = TRUE) %>%
 biodiv_zonal_vec <- HUC12_uncrop %>% select(huc12) %>%
   right_join(biodiv_zonal)
 
-# get spatvector of hotspots for each metric
-hotspot_zonal_vec <- biodiv_zonal_vec %>%
-  # get hotspots only in forested areas
-  filter(!is.na(ECO_NAME), !is.na(max_severity), forest_total > 0.3) %>%
-  mutate(across(-c(huc12, ECO_NAME, fire, low_sev, high_sev, no_data, unforested, max_severity, forest_total),
-                ~ifelse(.x > quantile(.x, probs = 0.95, na.rm = TRUE), 1, NA)),
-         hotspot_type = case_when(
-           abs(low_sev - high_sev) < 0.1 ~ "Mixed",
-           fire == 2 ~ "Area of Concern",
-           fire == 1 ~ "Refugia"
-         ))
+# get hotspots after filtering out non-forest pixels
+noforest_zonal <- biodiv_rast %>%
+  crop(cbi, mask = TRUE) %>%
+  c(., cbi) %>%
+  filter(predict.high.severity.fire.final %in% c(1,2)) %>%
+  select(-predict.high.severity.fire.final) %>%
+  zonal(., HUC12_uncrop, fun = "mean", na.rm = TRUE) %>%
+  cbind(huc12 = HUC12_uncrop$huc12, .) %>%
+  left_join(ecoregion_labels) %>%
+  left_join(values(huc12_cbi_modal_vect) %>% select(huc12, fire = predict.high.severity.fire.final)) %>%
+  left_join(huc_cbi_perc) %>%
+  mutate(max_severity = case_when(
+    low_sev == pmax(low_sev, high_sev, na.rm = TRUE) ~ "low_sev",
+    high_sev == pmax(low_sev, high_sev, na.rm = TRUE) ~ "high_sev"
+  )) %>%
+  rowwise() %>%
+  mutate(forest_total = sum(low_sev, high_sev, na.rm = TRUE)) %>%
+  filter(!is.na(max_severity), !is.na(ECO_NAME))
 
-ecoregion_hotspot_zonal_vec <- HUC12 %>% select(huc12) %>%
-  right_join(biodiv_zonal %>%
-  ## A WATERSHED CAN BE A HOTSPOT IF AT LEAST 20% IS FORESTED ##
-  filter(!is.na(ECO_NAME), !is.na(max_severity), forest_total > 0.20) %>%
+noforest_ecoregion_hotspot <- noforest_zonal %>%
+  #filter(forest_total > 0.20) %>%
   group_by(ECO_NAME) %>%
   mutate(across(-c(huc12, fire, low_sev, high_sev, no_data, unforested, max_severity, forest_total),
                 ~ifelse(.x > quantile(.x, probs = 0.95, na.rm = TRUE), 1, NA)),
@@ -127,7 +132,37 @@ ecoregion_hotspot_zonal_vec <- HUC12 %>% select(huc12) %>%
            max_severity == "high_sev" ~ "Area of Concern",
            max_severity == "low_sev" ~ "Refugia"
          )) %>%
-  ungroup())
+  ungroup()
+
+ecoregion_hotspot_zonal_vec <- HUC12 %>% select(huc12) %>%
+  right_join(noforest_ecoregion_hotspot)
+
+# # get spatvector of hotspots for each metric
+# hotspot_zonal_vec <- biodiv_zonal_vec %>%
+#   # get hotspots only in forested areas
+#   filter(!is.na(ECO_NAME), !is.na(max_severity), forest_total > 0.3) %>%
+#   mutate(across(-c(huc12, ECO_NAME, fire, low_sev, high_sev, no_data, unforested, max_severity, forest_total),
+#                 ~ifelse(.x > quantile(.x, probs = 0.95, na.rm = TRUE), 1, NA)),
+#          hotspot_type = case_when(
+#            abs(low_sev - high_sev) < 0.1 ~ "Mixed",
+#            fire == 2 ~ "Area of Concern",
+#            fire == 1 ~ "Refugia"
+#          ))
+#
+# ecoregion_hotspot_zonal_vec <- HUC12 %>% select(huc12) %>%
+#   right_join(biodiv_zonal %>%
+#   ## A WATERSHED CAN BE A HOTSPOT IF AT LEAST 20% IS FORESTED ##
+#   filter(!is.na(ECO_NAME), !is.na(max_severity), forest_total > 0.20) %>%
+#   group_by(ECO_NAME) %>%
+#   mutate(across(-c(huc12, fire, low_sev, high_sev, no_data, unforested, max_severity, forest_total),
+#                 ~ifelse(.x > quantile(.x, probs = 0.95, na.rm = TRUE), 1, NA)),
+#          hotspot_type = case_when(
+#            ## THIS IS THE SENSITIVITY FOR BEING CONSIDERED "MIXED"
+#            abs(low_sev - high_sev) < 0.1 ~ "Mixed",
+#            max_severity == "high_sev" ~ "Area of Concern",
+#            max_severity == "low_sev" ~ "Refugia"
+#          )) %>%
+#   ungroup())
 
 writeVector(biodiv_zonal_vec, here::here("data/biodiv_zonal.shp"))
 writeVector(ecoregion_hotspot_zonal_vec, here::here("data/ecoregion_hotspots_huc12.shp"))
