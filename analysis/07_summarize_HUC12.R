@@ -125,7 +125,7 @@ noforest_ecoregion_hotspot <- noforest_zonal %>%
   #filter(forest_total > 0.20) %>%
   group_by(ECO_NAME) %>%
   mutate(across(-c(huc12, fire, low_sev, high_sev, no_data, unforested, max_severity, forest_total),
-                ~ifelse(.x > quantile(.x, probs = 0.95, na.rm = TRUE), 1, NA)),
+                ~ifelse(.x > quantile(.x, probs = 0.90, na.rm = TRUE), 1, NA)),
          hotspot_type = case_when(
            ## THIS IS THE SENSITIVITY FOR BEING CONSIDERED "MIXED"
            abs(low_sev - high_sev) < 0.1 ~ "Mixed",

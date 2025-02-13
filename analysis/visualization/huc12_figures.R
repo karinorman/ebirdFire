@@ -58,7 +58,7 @@ plot_metric_map <- function(data, metric_col, legend_title){
   col = sym(metric_col)
 
   ggplot() +
-    geom_spatvector(data = data, aes(fill = !!col, color = !!col)) +
+    geom_spatvector(data = data, aes(fill = !!col, color = !!col), na.rm = TRUE) +
     theme_void() +
     viridis::scale_fill_viridis(name = legend_title) +
     viridis::scale_color_viridis(guide = "none") +
@@ -72,17 +72,25 @@ plot_metric_map <- function(data, metric_col, legend_title){
           legend.box.background = element_rect(fill = NA, color = NA),
           legend.key = element_rect(fill = "transparent"),
           legend.box = element_blank()
-    )
+    ) #+
+    # theme(legend.key.size=unit(1,'mm'),
+    #       legend.text=element_text(size=6),
+    #       legend.title=element_text(size=7))
 }
 
 
-metric_plot_df <- tibble(metric_col = c("breeding_richness", "ecoregion_breeding_lcbd", "FRic_breeding"), legend_title = c("Richness", "LCBD", "Functional \nRichness"))
+metric_plot_df <- tibble(metric_col = c("breeding_richness", "breeding_lcbd", "FRic_breeding"), legend_title = c("Richness", "LCBD", "Functional \nRichness"))
 
 metric_plot_list <- pmap(metric_plot_df, plot_metric_map, data = biodiv_zonal_vec)
 
 metric_join_plot <- wrap_plots(metric_plot_list, nrow = 1) + plot_annotation(tag_levels = "A")
+metric_join_plot <- plot_grid(metric_plot_list[[1]], metric_plot_list[[2]], metric_plot_list[[3]], nrow = 1, labels = "AUTO")
 
 ggsave(here::here("figures/huc12_metric_join.jpeg"), metric_join_plot)
+save_plot(here::here("figures/huc12_metric_join.jpeg"), metric_join_plot, nrow = 1, dpi = 100, width = 15, height = 11)
+
+ecoregion_lcbd <- plot_metric_map(data = biodiv_zonal_vec, metric_col = "ecoregion_breeding_lcbd", legend_title = "LCBD")
+ggsave(here::here("figures/huc12_ecoreg_lcbd.jpeg"), ecoregion_lcbd)
 
 #####################
 ### Hotspot Types ###
@@ -99,8 +107,8 @@ plot_hotspot_types <- function(data, metric_col){
                       filter(!!sym(metric_col) == 1),
                     aes(fill = hotspot_type, color = hotspot_type)) +
     theme_void() +
-    scale_fill_manual(values = list(`Refugia` = "#82A6B1", `Area of Concern` =  "#BC4749", `Mixed` = "#D5A021"), na.value = "transparent") +
-    scale_color_manual(values = list(`Refugia` = "#82A6B1", `Area of Concern` =  "#BC4749", `Mixed` = "#D5A021"), na.value = "transparent") +
+    scale_fill_manual(values = list(`Refugia` = "#82A6B1", `Area of Concern` =  "#BC4749", `Mixed` = "#D5A021"), na.value = "transparent", guide = "none") +
+    scale_color_manual(values = list(`Refugia` = "#82A6B1", `Area of Concern` =  "#BC4749", `Mixed` = "#D5A021"), na.value = "transparent", guide = "none") +
     theme(legend.title=element_blank(), panel.background = element_rect(fill = "transparent",
                                           colour = NA_character_), # necessary to avoid drawing panel outline
           panel.grid.major = element_blank(), # get rid of major grid
@@ -117,8 +125,17 @@ plot_hotspot_types <- function(data, metric_col){
 
 hotspot_plot_list <- map(c("breeding_richness", "ecoregion_breeding_lcbd", "FRic_breeding"), plot_hotspot_types, data = ecoregion_hotspot_zonal_vec)
 
-hotspot_type_figure <- patchwork::wrap_plots(hotspot_plot_list, nrow = 1, guides = "collect") +
-  plot_annotation(tag_levels = "A")
+hotspot_type_figure <- plot_grid(hotspot_plot_list[[1]], hotspot_plot_list[[2]], hotspot_plot_list[[3]], nrow =1)
 
-ggsave(here::here("figures/huc12_hotspot_join.jpeg"), hotspot_type_figure)
+#hotspot_type_figure <- patchwork::wrap_plots(hotspot_plot_list, nrow = 1) +
+  #plot_annotation(tag_levels = "A")
 
+ggsave(here::here("figures/huc12_hotspot_join.jpeg"), hotspot_type_figure, width = 180, height = 100, unit = "mm", dpi = 1000)
+
+
+##### Congruence map between richness, lcbd, fric
+cong_hotspot <- ecoregion_hotspot_zonal_vec %>%
+  mutate(cong_hotspot = ifelse(breeding_richness ==1 & ecoregion_breeding_lcbd == 1 & FRic_breeding == 1, 1, NA))
+
+cong_hotspot_map <- plot_hotspot_types(cong_hotspot, "cong_hotspot")
+ggsave(here::here("figures/huc12_cong_hotspot.jpeg"), cong_hotspot_map, width = 180, height = 100, unit = "mm", dpi = 1000)
