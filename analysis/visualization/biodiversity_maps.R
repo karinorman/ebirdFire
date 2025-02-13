@@ -104,7 +104,7 @@ rich_quant <- quantile(values(biodiv_rast$breeding_richness),c(0.33,0.66,1), na.
 lcbd_quant <- quantile(values(biodiv_rast$ecoregion_breeding_lcbd),c(0.33,0.66,1), na.rm = TRUE)
 fric_quant <- quantile(values(biodiv_rast$FRic_breeding),c(0.33,0.66,1), na.rm = TRUE)
 
-biodiv_quant <- biodiv_rast %>% mutate(breeding_quantile = ifelse(breeding_richness<rich_quant_b[1],1,ifelse(breeding_richness<rich_quant_b[2],2,3)),
+biodiv_quant <- biodiv_rast %>% mutate(breeding_quantile = ifelse(breeding_richness<rich_quant[1],1,ifelse(breeding_richness<rich_quant[2],2,3)),
                          lcbd_quantile = ifelse(ecoregion_breeding_lcbd<lcbd_quant[1],1,ifelse(ecoregion_breeding_lcbd<lcbd_quant[2],2,3)),
                          fric_quantile = ifelse(FRic_breeding<fric_quant[1],1,ifelse(FRic_breeding<fric_quant[2],2,3)))
 
@@ -200,6 +200,19 @@ bivar_plot_join <- patchwork::wrap_plots(bivar_plot_list) + legend +
 #bivar_plot_list[[1]] + bivar_plot_list[[2]] + bivar_legend + plot_layout(nrow = 1, width = c(1, 1, 1))
 
 ggsave(here::here("figures/metric_bivar.png"), bivar_plot_join, bg = "transparent")
+
+## Calculate percentage in each landscape
+quant <- as.data.frame(biodiv_quant, cells = TRUE)
+
+quant %>% select(cell, breeding_richness, ecoregion_breeding_lcbd,
+                 FRic_breeding, predict.high.severity.fire.final) %>%
+  pivot_longer(-c(cell, predict.high.severity.fire.final), names_to = "metric", values_to = "type") %>%
+  group_by(predict.high.severity.fire.final, metric, type) %>%
+  count() %>%
+  group_by(metric) %>%
+  mutate(perc = n/sum(n)) %>% View()
+
+
 
 #################################
 ########## CBI map ##############

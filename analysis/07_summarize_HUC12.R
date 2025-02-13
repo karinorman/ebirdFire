@@ -167,6 +167,18 @@ ecoregion_hotspot_zonal_vec <- HUC12 %>% select(huc12) %>%
 writeVector(biodiv_zonal_vec, here::here("data/biodiv_zonal.shp"))
 writeVector(ecoregion_hotspot_zonal_vec, here::here("data/ecoregion_hotspots_huc12.shp"))
 
+# how many hotspots fall in different fire severity categories for each metric
+hotspot_cat <- ecoregion_hotspot_zonal_vec %>%
+  as.data.frame() %>%
+  select(huc12, breeding_richness, ecoregion_breeding_lcbd,
+         FRic_breeding, hotspot_type) %>%
+  pivot_longer(-c(huc12, hotspot_type), names_to = "metric", values_to = "type") %>%
+  filter(!is.na(type)) %>%
+  select(-type) %>%
+  group_by(hotspot_type, metric) %>%
+  count() %>%
+  group_by(metric) %>%
+  mutate(perc = n/sum(n))
 # plot an example watershed for debugging
 watershed = "180201530301"
 ggplot() +
