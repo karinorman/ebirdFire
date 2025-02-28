@@ -221,25 +221,51 @@ density_plot_list <- pmap(xlab_df %>%
 
 density_plt_join <- patchwork::wrap_plots(density_plot_list, nrow = 1, axes = "collect_y")
 
-# # Get just Canadian rockies as an example
-# can_rock <- metric_stack_df %>%
-#   filter(cbi %in% c(1, 2), ecoregion == "Canadian Rocky Mountains") %>%
-#   mutate(fill_var = paste(ecoregion, cbi)) %>%
-#   filter(cbi %in% c(1,2)) %>%
-#   ggplot(aes(x = breeding_richness, y = ecoregion, fill = factor(fill_var, levels = levels_order))) +
-#   geom_density_ridges(#quantile_lines = TRUE, alpha = 0.75,
-#   #                     calc_ecdf = TRUE,
-#   #                     #geom = "density_ridges_gradient",
-#   #                     quantiles = c(0.95),
-#                       linewidth = .25) +
-#   theme_classic() +
-#   ylab(element_blank()) +
-#   scale_fill_manual(values = pal, guide = "none") +
-#   xlab("Breeding Richness") +
-#   theme(text = element_text(size = 15)) #+
-#   #xlim(0, 175)
-#
-# ggsave(here::here("figures", "canadian_rocky_density.png"), can_rock, height = 10, width = 6)
+# Get Cascades as main text example
+
+cascades_plots <- pmap(xlab_df %>%
+                         # modify arguments slightly for final figure, add which plot get's y axis
+                         filter(metric_col %in% c("breeding_richness", "breeding_lcbd", "FRic_breeding")) %>%
+                         arrange(match(metric_col, c("breeding_richness", "breeding_lcbd", "FRic_breeding"))) %>%
+                         bind_cols(y_axis = c(TRUE, FALSE, FALSE)) %>%
+                         mutate(xlab = c("Species Richness", "LCBD", "Functional Richness")),
+                       function(metric_col, xlab, y_axis){
+                         col = sym(metric_col)
+
+                         plt <- metric_stack_df %>%
+                           filter(cbi %in% c(1, 2),
+                                  ecoregion %in% c("West Cascades", "East Cascades - Modoc Plateau")) %>%
+                           mutate(fill_var = paste(ecoregion, cbi)) %>%
+                           filter(cbi %in% c(1,2)) %>%
+                           ggplot(aes(x = !!col, y = forcats::fct_rev(factor(ecoregion, levels = pal_df$ecoregion_names)),
+                                      fill = factor(cbi, levels = c("2", "1")))) +
+                           geom_density_ridges(alpha = 0.75) +
+                           theme_classic() +
+                           ylab(element_blank()) +
+                           scale_fill_manual(values = list(`2` = "#bd1b19", `1` = "#e1ad01"),
+                                             labels = c("high severity", "low severity")) +
+                           xlab(xlab) +
+                           theme(text = element_text(size = 15),
+                                 legend.title = element_blank()) +
+                           scale_y_discrete(expand = c(0,0),
+                                            labels = list("West Cascades", "East Cascades"))
+                           #ylim(c(0.5, 4))
+
+                         if (y_axis == FALSE){
+                           plt <- plt +
+                             theme(axis.line.y = element_blank(),
+                                   axis.text.y = element_blank(),
+                                   axis.ticks.y = element_blank())
+                         }
+
+                         return(plt)
+
+                         #ggsave(here::here("figures", paste0(metric_col, "density.png")))
+                       })
+
+cascades_plt_join <- patchwork::wrap_plots(cascades_plots, nrow = 1, axes = "collect_y", guides = "collect")
+
+ggsave(here::here("figures/cascades_density.jpeg"), cascades_plt_join, width = 15, height = 5.5, units = "in", dpi = 800)
 
 ### Ecoregion Map with color assignments ###
 US_boundary <- rnaturalearth::ne_states(iso_a2 = "US") %>%
