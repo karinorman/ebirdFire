@@ -53,13 +53,18 @@ usethis::use_data(nonbreeding_df)
 
 # get ecoregion labels for each cell
 # get template raster to compare ecoregions to
-ecoregions <- vect(here::here("raw_data/ecoregions/ecoregions_edc.shp")) %>%
-  project("epsg:4326")
+# study boundary
+boundary <- vect(here::here("data/study_boundary.shp"))
+
+# ecoregions
+ecoregion_comp <- terra::vect(here::here("raw_data/terr-ecoregions-TNC/tnc_terr_ecoregions.shp")) %>%
+  project("epsg:4326") %>%
+  crop(boundary)
 
 cell_coords <- breeding_df %>% select(cell, x, y)
 cell_coords_vec <- vect(cell_coords, geom = c("x", "y"), crs = "epsg:4326")
 
-ecoregion_int <- intersect(ecoregions, cell_coords_vec)
+ecoregion_int <- intersect(ecoregion_comp, cell_coords_vec)
 ecoregion_int_df <- terra::as.data.frame(ecoregion_int %>% select(ECO_NAME, cell))
 
 ## Create occurrence matrices, include cell id for joining later
