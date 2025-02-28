@@ -174,12 +174,14 @@ hotspot_cat <- ecoregion_hotspot_zonal_vec %>%
          FRic_breeding, hotspot_type) %>%
   pivot_longer(-c(huc12, hotspot_type), names_to = "metric", values_to = "type") %>%
   filter(!is.na(type)) %>%
+  left_join(as.data.frame(HUC12) %>% select(huc12, areasqkm)) %>%
   select(-type) %>%
   group_by(hotspot_type, metric) %>%
-  count() %>%
+  summarize(total_area = sum(areasqkm)) %>%
   group_by(metric) %>%
-  mutate(perc = n/sum(n))
-# plot an example watershed for debugging
+  mutate(perc = total_area/sum(total_area))
+
+# plot an exsummarise()# plot an example watershed for debugging
 watershed = "180201530301"
 ggplot() +
   geom_spatraster(data = cbi %>% mutate(predict.high.severity.fire.final = as.factor(predict.high.severity.fire.final)) %>% crop(HUC12_uncrop %>% filter(huc12 == watershed))) +
