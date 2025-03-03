@@ -108,8 +108,8 @@ plot_hotspot_types <- function(data, metric_col){
                       filter(!!sym(metric_col) == 1),
                     aes(fill = hotspot_type, color = hotspot_type)) +
     theme_void() +
-    scale_fill_manual(values = list(`Refugia` = "#82A6B1", `Area of Concern` =  "#BC4749", `Mixed` = "#D5A021"), na.value = "transparent", guide = "none") +
-    scale_color_manual(values = list(`Refugia` = "#82A6B1", `Area of Concern` =  "#BC4749", `Mixed` = "#D5A021"), na.value = "transparent", guide = "none") +
+    scale_fill_manual(values = list(`Refugia` = "#82A6B1", `Area of Concern` =  "#BC4749", `Mixed` = "#D5A021"), na.value = "transparent") +
+    scale_color_manual(values = list(`Refugia` = "#82A6B1", `Area of Concern` =  "#BC4749", `Mixed` = "#D5A021"), na.value = "transparent") +
     theme(legend.title=element_blank(), panel.background = element_rect(fill = "transparent",
                                           colour = NA_character_), # necessary to avoid drawing panel outline
           panel.grid.major = element_blank(), # get rid of major grid
@@ -119,16 +119,18 @@ plot_hotspot_types <- function(data, metric_col){
           legend.background = element_rect(fill = NA, color = NA),
           legend.box.background = element_rect(fill = NA, color = NA),
           legend.key = element_rect(fill = "transparent"),
-          legend.box = element_blank()
+          legend.box = element_blank(),
+          legend.text = element_text(size = 14),
+          legend.key.size = unit(3,"line")
     )
 }
 
 
 hotspot_plot_list <- map(c("breeding_richness", "ecoregion_breeding_lcbd", "FRic_breeding"), plot_hotspot_types, data = ecoregion_hotspot_zonal_vec)
 
-hotspot_type_figure <- plot_grid(hotspot_plot_list[[1]], hotspot_plot_list[[2]], hotspot_plot_list[[3]], nrow =1)
+#hotspot_type_figure <- plot_grid(hotspot_plot_list[[1]], hotspot_plot_list[[2]], hotspot_plot_list[[3]], nrow =1)
 
-#hotspot_type_figure <- patchwork::wrap_plots(hotspot_plot_list, nrow = 1) +
+hotspot_type_figure <- patchwork::wrap_plots(hotspot_plot_list, nrow = 1, guides = "collect")# +
   #plot_annotation(tag_levels = "A")
 
 ggsave(here::here("figures/huc12_hotspot_join.jpeg"), hotspot_type_figure, width = 180, height = 100, unit = "mm", dpi = 1000)
@@ -205,7 +207,7 @@ legend <- ggplot() +
   labs(x="Biodiversity Metric \U2192",y="Fire Severity \U2192") +
   # make font small enough
   theme(
-    axis.title = element_text(size = 10),
+    axis.title = element_text(size = 14),
     axis.title.y = element_text(angle=90),
     axis.line=element_blank(),
     axis.ticks=element_blank(),
@@ -264,12 +266,34 @@ bivar_plot_join <- patchwork::wrap_plots(bivar_plot_list) + legend +
 ggsave(here::here("figures/metric_bivar.png"), bivar_plot_join, bg = "transparent")
 
 ## Calculate percentage in each landscape
-quant <- as.data.frame(biodiv_quant, cells = TRUE)
+# quant <- as.data.frame(biodiv_quant, cells = TRUE)
+#
+# quant %>% select(cell, breeding_richness, ecoregion_breeding_lcbd,
+#                  FRic_breeding, predict.high.severity.fire.final) %>%
+#   pivot_longer(-c(cell, predict.high.severity.fire.final), names_to = "metric", values_to = "type") %>%
+#   group_by(predict.high.severity.fire.final, metric, type) %>%
+#   count() %>%
+#   group_by(metric) %>%
+#   mutate(perc = n/sum(n)) %>% View()
 
-quant %>% select(cell, breeding_richness, ecoregion_breeding_lcbd,
-                 FRic_breeding, predict.high.severity.fire.final) %>%
-  pivot_longer(-c(cell, predict.high.severity.fire.final), names_to = "metric", values_to = "type") %>%
-  group_by(predict.high.severity.fire.final, metric, type) %>%
-  count() %>%
-  group_by(metric) %>%
-  mutate(perc = n/sum(n)) %>% View()
+#######################################
+##### master bivar/hostpot figure #####
+#######################################
+
+# patchwork::wrap_plots(hotspot_plot_list, nrow = 1, guides = "collect") / (patchwork::wrap_plots(bivar_plot_list) + legend +
+#   plot_layout(nrow = 1, ncol = 4, width = c(1.2,1.2, 1.2,.4)))
+#
+# ((patchwork::wrap_plots(hotspot_plot_list, nrow = 1, guides = "collect") / patchwork::wrap_plots(bivar_plot_list, nrow = 1)) | cong_hotspot_map) #+
+#   #plot_layout(widths = c(2,1))
+
+
+bivar_hotspot <-  (bivar_plot_list[[1]] + bivar_plot_list[[2]] + bivar_plot_list[[3]] +
+     (plot_spacer() + legend + plot_spacer() + plot_layout(widths = c(1,4,3))) +
+     plot_layout(nrow = 1, width = c(1,1,1,1), heights = c(1,1,1,.5))) /
+  (hotspot_plot_list[[1]] + hotspot_plot_list[[2]] + hotspot_plot_list[[3]] + guide_area() + plot_layout(guides = "collect", nrow = 1))
+
+ggsave(here::here("figures/bivar_hotspot_join.jpeg"), bivar_hotspot, dpi = 800, width = 20)
+
+#bivar_hotspot + cong_hotspot_map + plot_layout(widths = c(2.5, 1), heights = c(1, .8))
+
+#(plot_spacer() + cong_hotspot_map + plot_spacer() + plot_layout(heights = c(1,4,1)))
