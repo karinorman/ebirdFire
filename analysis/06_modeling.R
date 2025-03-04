@@ -60,7 +60,12 @@ model_fits <- map(model_output_df, 2)
 # shorter beaks are more likely to be in high severity, and birds that like high density
 model_output_df %>% filter(p.value < 0.05, term != "(Intercept)", component %in% c("mu", "mean"), percent_type == "population") %>% View()
 
+model_output_supp <- model_output_df %>%
+  filter(percent_type == "population") %>%
+  select(-percent_type) %>%
+  mutate(across(where(~is.numeric(.x)), round, 2))
 
+readr::write_csv(model_output_supp, here::here("figures/model_output_supp.csv"))
 
 # habitat_contrasts <- emmeans(habitat_fit, pairwise ~ Habitat, data = traits_df)$contrasts %>% as.data.frame()
 #
