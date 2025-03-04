@@ -259,6 +259,29 @@ sig_ecoregions_df <- greater_sig_ecoregions %>%
   mutate(test_tail = "upper") %>%
   bind_rows(lower_sig_ecoregions %>% mutate(test_tail = "lower"))
 
+sig_ecoregions_fig <- sig_ecoregions_df %>%
+  filter(metric %in% c("breeding_richness", "FRic_breeding", "ecoregion_breeding_lcbd")) %>%
+  select(ECO_NAME, test_tail, metric) %>%
+  ggplot(aes(x = ECO_NAME, y = metric, fill = test_tail)) +
+  geom_tile(alpha = 0.8, color = "white") +
+  theme_minimal() +
+  scale_fill_manual(values = list("lower" = "#5296A5", "upper" = "#BC4749"), labels = list("lower" = "lower tail", "upper" = "upper tail"),
+                    na.value = "lightgrey") +
+  scale_x_discrete(expand = c(0,0),
+                   position = "top") +
+  scale_y_discrete(labels = list("breeding_richness" = "Species Richness", "ecoregion_breeding_lcbd" = "LCBD",
+                                 "FRic_breeding" = "Functional Richness"),
+                   expand = c(0,0)) +
+  theme(panel.grid = element_blank(),
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        legend.title = element_blank(),
+        axis.text.x = element_text(angle = 45, hjust = 0),
+        panel.border=element_rect(fill = NA, colour=alpha('lightgrey', .5),size=1)) +
+  coord_fixed()
+
+ggsave(here::here("figures/binomial_heatmap.jpeg"), sig_ecoregions_fig)
+
 # Let's map some stuff!
 
 # get a US boundary base map

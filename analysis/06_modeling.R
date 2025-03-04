@@ -82,6 +82,7 @@ percent_hist <- traits_df %>%
   xlab("Percent of Global Population") +
   ylab("Species Count") +
   theme(legend.title = element_blank(),
+        text = element_text(size=15),
         panel.background = element_rect(fill = "transparent",
                                         colour = NA_character_), # necessary to avoid drawing panel outline
         panel.grid.major = element_blank(), # get rid of major grid

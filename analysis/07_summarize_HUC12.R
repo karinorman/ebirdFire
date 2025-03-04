@@ -179,7 +179,11 @@ hotspot_cat <- ecoregion_hotspot_zonal_vec %>%
   group_by(hotspot_type, metric) %>%
   summarize(total_area = sum(areasqkm)) %>%
   group_by(metric) %>%
-  mutate(perc = total_area/sum(total_area))
+  mutate(perc = total_area/sum(total_area)) %>%
+  select(-total_area) %>%
+  pivot_wider(names_from = hotspot_type, values_from = perc)
+
+readr::write_csv(hotspot_cat, here::here("figures/hotspot_type_table.csv"))
 
 # plot an exsummarise()# plot an example watershed for debugging
 watershed = "180201530301"
