@@ -62,6 +62,8 @@ plot_metric_map <- function(data, metric_col, legend_title){
     theme_void() +
     viridis::scale_fill_viridis(name = legend_title) +
     viridis::scale_color_viridis(guide = "none") +
+    geom_spatvector(data = boundary_states, color = "lightgrey", fill = "transparent") +
+    geom_spatvector(data = boundary, color = "black", fill = "transparent") +
     theme(panel.background = element_rect(fill = "transparent",
                                           colour = NA_character_), # necessary to avoid drawing panel outline
           panel.grid.major = element_blank(), # get rid of major grid
@@ -235,7 +237,7 @@ bivar_plot_list <- map(c("breeding_richness", "ecoregion_breeding_lcbd", "FRic_b
     select(plot_group)
 
   bivar <- ggplot() +
-    geom_spatvector(data = boundary, color = "black", fill = "white", alpha = 0.5) +
+    geom_spatvector(data = boundary_states, color = "black", fill = "white") +
     #geom_spatvector(data = ecoregions %>% filter(ECO_NAME %in% plot_ecoregions) %>% terra::aggregate(), color = "black", fill = "white", linewidth = 0.4) +
     #geom_spatvector(data = ecoregions %>% terra::aggregate(), color = "black", fill = "transparent", linetype = "dotted", linewidth = .4) +
     geom_spatraster(data = plot_data, maxcell = 2500000) +
