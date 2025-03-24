@@ -238,7 +238,9 @@ cascades_plots <- pmap(xlab_df %>%
                            mutate(fill_var = paste(ecoregion, cbi)) %>%
                            filter(cbi %in% c(1,2)) %>%
                            ggplot(aes(x = !!col, y = forcats::fct_rev(factor(ecoregion, levels = pal_df$ecoregion_names)),
-                                      fill = factor(cbi, levels = c("2", "1")))) +
+                                      fill = factor(cbi, levels = c("2", "1")),
+                                      height = ..ndensity..
+                                      )) +
                            geom_density_ridges(alpha = 0.75) +
                            theme_classic() +
                            ylab(element_blank()) +
