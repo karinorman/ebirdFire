@@ -34,7 +34,7 @@ ecoregion_hotspots <- metric_rast %>%
   terra::as.data.frame(., xy = TRUE) %>%
   group_by(ECO_NAME) %>%
   mutate(across(-c(x,y),
-                ~ifelse(.x > quantile(.x, probs = 0.95, na.rm = TRUE), 1, NA))) %>%
+                ~ifelse(.x > quantile(.x, probs = 0.90, na.rm = TRUE), 1, NA))) %>%
   ungroup() %>%
   select(-ECO_NAME) %>%
   rast(.,  type="xyz", crs = "epsg:4326")
@@ -44,7 +44,7 @@ forest_hotspots <- c(cbi, metric_rast) %>%
   terra::as.data.frame(., xy = TRUE) %>%
   group_by(ECO_NAME) %>%
   mutate(across(-c(x,y),
-                ~ifelse(.x > quantile(.x, probs = 0.95, na.rm = TRUE), 1, NA))) %>%
+                ~ifelse(.x > quantile(.x, probs = 0.90, na.rm = TRUE), 1, NA))) %>%
   ungroup() %>%
   select(-ECO_NAME) %>%
   rast(.,  type="xyz", crs = "epsg:4326") %>%
@@ -55,7 +55,7 @@ forest_quantile_cutoffs <- c(cbi, metric_rast) %>%
   terra::as.data.frame(., xy = FALSE) %>%
   select(-predict.high.severity.fire.final) %>%
   group_by(ECO_NAME) %>%
-  summarize(across(everything(), ~quantile(.x, probs = 0.95, na.rm = TRUE))) %>%
+  summarize(across(everything(), ~quantile(.x, probs = 0.90, na.rm = TRUE))) %>%
   ungroup()
 
 hotspot_rasts <- c(ecoregion_hotspots, forest_hotspots) %>%
