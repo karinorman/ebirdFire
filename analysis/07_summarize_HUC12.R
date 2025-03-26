@@ -172,18 +172,13 @@ hotspot_cat <- ecoregion_hotspot_zonal_vec %>%
   as.data.frame() %>%
   select(huc12, breeding_richness, ecoregion_breeding_lcbd,
          FRic_breeding, hotspot_type) %>%
-  pivot_longer(-c(huc12, hotspot_type), names_to = "metric", values_to = "type") %>%
-  filter(!is.na(type)) %>%
-  left_join(as.data.frame(HUC12) %>% select(huc12, areasqkm)) %>%
-  select(-type) %>%
-  group_by(hotspot_type, metric) %>%
-  summarize(total_area = sum(areasqkm)) %>%
+  group_by(hotspot_type) %>%
+  summarize(across(c(ecoregion_breeding_lcbd, breeding_richness, FRic_breeding), ~sum(!is.na(.x)))) %>%
+  pivot_longer(-hotspot_type, names_to = "metric", values_to = "count") %>%
   group_by(metric) %>%
-  mutate(perc = total_area/sum(total_area)) %>%
-  select(-total_area) %>%
-  pivot_wider(names_from = hotspot_type, values_from = perc)
+  mutate(percent = count/sum(count))
 
-readr::write_csv(hotspot_cat, here::here("figures/hotspot_type_table.csv"))
+usethis::use_data(hotspot_cat)
 
 # plot an exsummarise()# plot an example watershed for debugging
 watershed = "180201530301"
