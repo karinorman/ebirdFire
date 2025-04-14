@@ -109,4 +109,72 @@ cowplot::save_plot(here::here("figures/hotspot_dist.jpeg"), hotspot_dist_join, n
 #   select(huc12) %>%
 #   left_join(hist_regime)
 
+####################################
+### Map of historical fire regime ##
+####################################
+
+library(ggplot2)
+
+hist_hotspots <- ecoregion_hotspot_zonal_vec %>%
+  left_join(hist_regime %>% select(huc12, historical_type)) %>%
+  filter(!is.na(historical_type)) %>%
+  mutate(historical_plot = case_when(
+    historical_type == "low_sev" ~ "low severity",
+    historical_type == "high_sev" ~ "high severity",
+    historical_type == "mixed" ~ "mixed severity"
+  ))
+
+# get basemap stuff
+# read in CBI raster
+cbi <- rast(here::here("data/cbi.tif"))
+cbi_forest <- cbi %>%
+  filter(predict.high.severity.fire.final %in% c(1,2)) %>%
+  as.polygons() %>%
+  aggregate()
+
+# get basemap for plotting
+boundary <- vect(here::here("data/study_boundary.shp"))
+boundary_states <- rnaturalearth::ne_states(iso_a2 = "US") %>%
+  vect() %>%
+  project("epsg:4326") %>%
+  filter(name %in% c("Washington", "Oregon", "California", "Idaho", "Nevada",
+                     "Montana", "Arizona", "Utah", "Wyoming", "Colorado", "New Mexico", "Texas")) %>%
+  crop(boundary)
+
+plot_hotspot_types <- function(data, metric_col){
+
+  col = sym(metric_col)
+
+  ggplot() +
+    geom_spatvector(data = boundary_states, color = "black", fill = "white") +
+    geom_spatvector(data = cbi_forest, fill = "#DDDDDDBF", color = "transparent", alpha = 0.4) +
+    geom_spatvector(data = data %>%
+                      filter(!!sym(metric_col) == 1, hotspot_type == "Area of Concern"),
+                    aes(fill = historical_plot, color = historical_plot)) +
+    theme_void() +
+    scale_fill_manual(values = list(`low severity` = "#82A6B1", `high severity` =  "#BC4749", `mixed severity` = "#D5A021"), na.value = "transparent") +
+    scale_color_manual(values = list(`low severity` = "#82A6B1", `high severity` =  "#BC4749", `mixed severity` = "#D5A021"), na.value = "transparent") +
+    theme(legend.title=element_blank(), panel.background = element_rect(fill = "transparent",
+                                                                        colour = NA_character_), # necessary to avoid drawing panel outline
+          panel.grid.major = element_blank(), # get rid of major grid
+          panel.grid.minor = element_blank(), # get rid of minor grid
+          plot.background = element_rect(fill = "transparent",
+                                         colour = NA_character_), # necessary to avoid drawing plot outline
+          legend.background = element_rect(fill = NA, color = NA),
+          legend.box.background = element_rect(fill = NA, color = NA),
+          legend.key = element_rect(fill = "transparent"),
+          legend.box = element_blank(),
+          legend.text = element_text(size = 14),
+          legend.key.size = unit(3,"line")
+    )
+}
+
+
+hotspot_plot_list <- map(c("breeding_richness", "ecoregion_breeding_lcbd", "FRic_breeding"), plot_hotspot_types, data = hist_hotspots)
+
+#hotspot_type_figure <- plot_grid(hotspot_plot_list[[1]], hotspot_plot_list[[2]], hotspot_plot_list[[3]], nrow =1)
+
+hotspot_type_figure <- patchwork::wrap_plots(hotspot_plot_list, nrow = 1, guides = "collect")# +
+#plot_annotation(tag_levels = "A")
+
 
