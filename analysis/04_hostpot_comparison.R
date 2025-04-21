@@ -190,18 +190,56 @@ sig_ecoregions_df <- greater_sig_ecoregions %>%
   mutate(test_tail = "upper") %>%
   bind_rows(lower_sig_ecoregions %>% mutate(test_tail = "lower"))
 
-sig_ecoregions_fig <- sig_ecoregions_df %>%
+usethis::use_data(sig_ecoregions_df)
+
+
+########################
+####### Figures ########
+########################
+
+# get the tile figure showing test results
+
+sig_ecoregions_plot_df <- sig_ecoregions_df %>%
+  group_by(ECO_NAME) %>%
+  mutate(ECO_NUM = cur_group_id()) %>%
+  ungroup() %>%
+  mutate(plot_eco_name = paste(ECO_NUM, ECO_NAME, sep = " "))
+
+# horizontal
+# sig_ecoregions_fig <- sig_ecoregions_plot_df %>%
+#   filter(metric %in% c("breeding_richness", "FRic_breeding", "ecoregion_breeding_lcbd")) %>%
+#   select(plot_eco_name, ECO_NUM, test_tail, metric) %>%
+#   ggplot(aes(x = reorder(plot_eco_name, ECO_NUM), y = metric, fill = test_tail)) +
+#   geom_tile(alpha = 0.8, color = "white") +
+#   theme_minimal() +
+#   scale_fill_manual(values = list("lower" = "#5296A5", "upper" = "#BC4749"), labels = list("lower" = "lower tail", "upper" = "upper tail"),
+#                     na.value = "lightgrey") +
+#   scale_x_discrete(expand = c(0,0),
+#                    position = "top") +
+#   scale_y_discrete(labels = list("breeding_richness" = "Species Richness", "ecoregion_breeding_lcbd" = "LCBD",
+#                                  "FRic_breeding" = "Functional Richness"),
+#                    expand = c(0,0)) +
+#   theme(panel.grid = element_blank(),
+#         axis.title.x = element_blank(),
+#         axis.title.y = element_blank(),
+#         legend.title = element_blank(),
+#         axis.text.x = element_text(angle = 45, hjust = 0),
+#         panel.border=element_rect(fill = NA, colour=alpha('lightgrey', .5),size=1)) +
+#   coord_fixed()
+
+# vertical
+sig_ecoregions_fig <- sig_ecoregions_plot_df %>%
   filter(metric %in% c("breeding_richness", "FRic_breeding", "ecoregion_breeding_lcbd")) %>%
-  select(ECO_NAME, test_tail, metric) %>%
-  ggplot(aes(x = ECO_NAME, y = metric, fill = test_tail)) +
+  select(plot_eco_name, ECO_NUM, test_tail, metric) %>%
+  ggplot(aes(y = reorder(plot_eco_name, ECO_NUM, decreasing = TRUE), x = metric, fill = test_tail)) +
   geom_tile(alpha = 0.8, color = "white") +
   theme_minimal() +
   scale_fill_manual(values = list("lower" = "#5296A5", "upper" = "#BC4749"), labels = list("lower" = "lower tail", "upper" = "upper tail"),
                     na.value = "lightgrey") +
-  scale_x_discrete(expand = c(0,0),
-                   position = "top") +
-  scale_y_discrete(labels = list("breeding_richness" = "Species Richness", "ecoregion_breeding_lcbd" = "LCBD",
-                                 "FRic_breeding" = "Functional Richness"),
+  scale_y_discrete(expand = c(0,0),
+                   position = "left") +
+  scale_x_discrete(labels = list("breeding_richness" = "Species Richness", "ecoregion_breeding_lcbd" = "LCBD",
+                                 "FRic_breeding" = "Functional Richness"), position = "top",
                    expand = c(0,0)) +
   theme(panel.grid = element_blank(),
         axis.title.x = element_blank(),
@@ -211,9 +249,15 @@ sig_ecoregions_fig <- sig_ecoregions_df %>%
         panel.border=element_rect(fill = NA, colour=alpha('lightgrey', .5),size=1)) +
   coord_fixed()
 
-ggsave(here::here("figures/binomial_heatmap.jpeg"), sig_ecoregions_fig)
 
-# Let's map some stuff!
+#ggsave(here::here("figures/binomial_heatmap.jpeg"), sig_ecoregions_fig)
+
+# get map of ecoregions
+
+# pal <- colorspace::terrain_hcl(n = 20)
+#pal <- colorRampPalette(RColorBrewer::brewer.pal(9, "YlGn"))\
+
+pal <- colorRampPalette(c("#d7e8d2", "#3F6634"))
 
 # get a US boundary base map
 US_boundary_states <- rnaturalearth::ne_states(iso_a2 = "US") %>%
@@ -225,31 +269,78 @@ US_boundary_states <- rnaturalearth::ne_states(iso_a2 = "US") %>%
 
 US_boundary <- US_boundary_states %>% aggregate()
 
-map(c("ecoregion_breeding_lcbd", "breeding_richness", "FRic_breeding"), function(metric_name) {
-  #browser()
+# get centroids of ecoregions for labels
+eco_cent <- centroids(ecoregion_shp, inside = TRUE) %>%
+  select(ECO_NAME) %>%
+  left_join(sig_ecoregions_plot_df %>% select(ECO_NAME, ECO_NUM) %>% as.data.frame()) %>%
+  sf::st_as_sf() %>%
+  dplyr::mutate(lon = sf::st_coordinates(.)[,1],
+                lat = sf::st_coordinates(.)[,2]) %>%
+  as.data.frame() %>%
+  mutate(lon = case_when(
+    ECO_NUM == 1 ~ -109.7,
+    ECO_NUM == 9 ~ -121,
+    ECO_NUM == 14 ~ -118.7,
+    ECO_NUM == 8 ~ -118,
+    ECO_NUM == 13 ~ -106.5,
+    ECO_NUM == 18 ~ -110.3,
+    ECO_NUM == 6 ~ -115,
+    ECO_NUM == 15 ~ -119.6,
+    .default = lon
+  ),
+  lat = case_when(
+    ECO_NUM == 1 ~ 32,
+    ECO_NUM == 9 ~ 42,
+    ECO_NUM == 14 ~ 48.6,
+    ECO_NUM == 8 ~ 43,
+    ECO_NUM == 13 ~ 47,
+    ECO_NUM == 18 ~ 44.5,
+    ECO_NUM == 6 ~ 48,
+    ECO_NUM == 15 ~ 37.85,
+    .default = lat
+  ))
 
-  greater_sig_metrics <- sig_ecoregions_df %>%
-  filter(test_tail == "upper", metric == metric_name) %>%
-  pull(ECO_NAME)
+set.seed(45)
 
-  lower_sig_metrics <- sig_ecoregions_df %>%
-    filter(test_tail == "lower", metric == metric_name) %>%
-    pull(ECO_NAME)
+eco_plt <- ggplot() +
+  geom_spatvector(data = US_boundary_states %>% crop(boundary), fill = NA, linetype = "dashed") +
+  geom_spatvector(data = boundary, fill = NA, color = "black") +
+  geom_spatvector(data = ecoregion_shp, aes(fill = ECO_NAME), alpha = 0.75) +
+  geom_point(data = eco_cent, aes(x = lon, y = lat), size = 8, shape = 21, color = "black", fill = "white") +
+  geom_text(data = eco_cent %>% select(ECO_NUM, lon, lat) %>% distinct(), aes(label = ECO_NUM, x = lon, y = lat)) +
+  scale_fill_manual(values = sample(pal(19))) +
+  ggthemes::theme_map() +
+  theme(legend.position = "none")
 
-indicator_shp <- ecoregion_shp %>%
-  mutate(significant = case_when(
-    ECO_NAME %in% greater_sig_metrics ~ "more higher severity",
-    ECO_NAME %in% lower_sig_metrics ~ "less high severity",
-    .default = "nonsignificant"
-  )) %>%
-  crop(., boundary)
+sig_tail_join <- sig_ecoregions_fig + eco_plt + plot_layout(nrow = 1, widths = c(.3, 1.2))
+ggsave(here::here("figures/sig_tail_ecoregion_join.jpeg"), sig_tail_join, height = 200, width = 270, units = "mm", dpi = 800)
 
-plot <- ggplot() +
-  geom_spatvector(mapping = aes(fill = as.factor(significant)), data = indicator_shp, color = "black", linewidth = 0.4) +
-  geom_spatvector(data = US_boundary, fill = NA) +
-  scale_fill_discrete(type = c("#117733", "#e1ad01", "white"), name = "") +
-  theme_map() +
-  ggtitle(metric_name)
 
-ggsave(here::here(paste0("figures/", metric_name, "_binomial_test.png")), plot)
-})
+# map(c("ecoregion_breeding_lcbd", "breeding_richness", "FRic_breeding"), function(metric_name) {
+#   #browser()
+#
+#   greater_sig_metrics <- sig_ecoregions_df %>%
+#   filter(test_tail == "upper", metric == metric_name) %>%
+#   pull(ECO_NAME)
+#
+#   lower_sig_metrics <- sig_ecoregions_df %>%
+#     filter(test_tail == "lower", metric == metric_name) %>%
+#     pull(ECO_NAME)
+#
+# indicator_shp <- ecoregion_shp %>%
+#   mutate(significant = case_when(
+#     ECO_NAME %in% greater_sig_metrics ~ "more higher severity",
+#     ECO_NAME %in% lower_sig_metrics ~ "less high severity",
+#     .default = "nonsignificant"
+#   )) %>%
+#   crop(., boundary)
+#
+# plot <- ggplot() +
+#   geom_spatvector(mapping = aes(fill = as.factor(significant)), data = indicator_shp, color = "black", linewidth = 0.4) +
+#   geom_spatvector(data = US_boundary, fill = NA) +
+#   scale_fill_discrete(type = c("#117733", "#e1ad01", "white"), name = "") +
+#   theme_map() +
+#   ggtitle(metric_name)
+#
+# ggsave(here::here(paste0("figures/", metric_name, "_binomial_test.png")), plot)
+# })
