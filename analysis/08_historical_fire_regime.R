@@ -141,11 +141,11 @@ boundary_states <- rnaturalearth::ne_states(iso_a2 = "US") %>%
                      "Montana", "Arizona", "Utah", "Wyoming", "Colorado", "New Mexico", "Texas")) %>%
   crop(boundary)
 
-plot_hotspot_types <- function(data, metric_col){
+plot_hist_hotspot_types <- function(data, metric_col, legend = TRUE){
 
   col = sym(metric_col)
 
-  ggplot() +
+  plot <- ggplot() +
     geom_spatvector(data = boundary_states, color = "black", fill = "white") +
     geom_spatvector(data = cbi_forest, fill = "#DDDDDDBF", color = "transparent", alpha = 0.4) +
     geom_spatvector(data = data %>%
@@ -166,15 +166,27 @@ plot_hotspot_types <- function(data, metric_col){
           legend.box = element_blank(),
           legend.text = element_text(size = 14),
           legend.key.size = unit(3,"line")
-    )
+          )
+
+  if (legend == "FALSE"){
+    plot <- plot + theme(legend.position = "none")
+  }
+
+  return(plot)
 }
 
 
-hotspot_plot_list <- map(c("breeding_richness", "ecoregion_breeding_lcbd", "FRic_breeding"), plot_hotspot_types, data = hist_hotspots)
+hotspot_hist_list <- map(c("breeding_richness", "ecoregion_breeding_lcbd", "FRic_breeding"), plot_hist_hotspot_types, data = hist_hotspots, legend = TRUE)
 
-#hotspot_type_figure <- plot_grid(hotspot_plot_list[[1]], hotspot_plot_list[[2]], hotspot_plot_list[[3]], nrow =1)
+# cowplot attempt
+# legend_plot <- plot_hist_hotspot_types(data = hist_hotspots, "breeding_richness")
+# legend <- cowplot::get_legend(legend_plot + theme(legend.box.margin = margin(0, 10, 10, 0)))
+# hotspot_hist_figure <- cowplot::plot_grid(hotspot_hist_list[[1]], hotspot_hist_list[[2]], hotspot_hist_list[[3]], nrow = 1)
+#
+# hotspot_hist_figure <- cowplot::plot_grid(hotspot_hist_figure, legend, rel_widths = c(3, .4))
+# cowplot::save_plot(here::here("figures/huc12_hotspot_hist_join.jpeg"), hotspot_hist_figure, nrow = 1)
 
-hotspot_type_figure <- patchwork::wrap_plots(hotspot_plot_list, nrow = 1, guides = "collect")# +
-#plot_annotation(tag_levels = "A")
+hotspot_hist_figure <- hotspot_hist_list[[1]] + hotspot_hist_list[[2]] + hotspot_hist_list[[3]] + plot_layout(nrow = 1, guides = "collect")
 
+ggsave(here::here("figures/huc12_hotspot_hist_join.jpeg"), hotspot_hist_figure, width = 420, height = 250, unit = "mm", dpi = 1000)
 
