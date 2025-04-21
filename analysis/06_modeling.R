@@ -4,6 +4,8 @@ library(dplyr)
 library(betareg)
 library(broom)
 library(emmeans)
+library(tidyr)
+library(purrr)
 
 load(here::here("data/avonet_ebird_matched.rda"))
 load(here::here("data/species_range_metrics.rda"))
