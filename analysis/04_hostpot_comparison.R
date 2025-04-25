@@ -238,7 +238,7 @@ sig_ecoregions_fig <- sig_ecoregions_plot_df %>%
                     na.value = "lightgrey") +
   scale_y_discrete(expand = c(0,0),
                    position = "left") +
-  scale_x_discrete(labels = list("breeding_richness" = "Species Richness", "ecoregion_breeding_lcbd" = "LCBD",
+  scale_x_discrete(labels = list("breeding_richness" = "Species Richness", "ecoregion_breeding_lcbd" = "Uniqueness",
                                  "FRic_breeding" = "Functional Richness"), position = "top",
                    expand = c(0,0)) +
   theme(panel.grid = element_blank(),

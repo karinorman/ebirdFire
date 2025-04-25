@@ -76,7 +76,7 @@ sev_bar <- ggplot(hotspot_cat %>% mutate(hotspot_type = factor(hotspot_type, lev
                     labels = list(`Refugia` = "low severity",  `Mixed` = "mixed", `Area of Concern` =  "high severity"), guide = "none") +
   ylab("percent of hotspots") +
   xlab("") +
-  scale_x_discrete(labels = list("breeding_richness" = "Richness", "ecoregion_breeding_lcbd" = "LCBD", "FRic_breeding" =  "Functional Richness")) +
+  scale_x_discrete(labels = list("breeding_richness" = "Richness", "ecoregion_breeding_lcbd" = "Uniqueness", "FRic_breeding" =  "Functional Richness")) +
   coord_flip() +
   ggtitle("Predicted")
 
@@ -95,7 +95,7 @@ hist_sev_bar <- ggplot(hotspot_dist %>% mutate(historical_type = factor(historic
   scale_fill_manual(values = pal_hist, labels = list("mixed" = "mixed", "high_sev" = "high severity", "low_sev" = "low severity")) +
   ylab("percent of hotspots") +
   xlab("") +
-  scale_x_discrete(labels = list("breeding_richness" = "Richness", "ecoregion_breeding_lcbd" = "LCBD", "FRic_breeding" =  "Functional Richness")) +
+  scale_x_discrete(labels = list("breeding_richness" = "Richness", "ecoregion_breeding_lcbd" = "Uniqueness", "FRic_breeding" =  "Functional Richness")) +
   coord_flip() +
   guides(fill = guide_legend(reverse = TRUE)) +
   ggtitle("Historical")

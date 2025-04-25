@@ -228,7 +228,7 @@ cascades_plots <- pmap(xlab_df %>%
                          filter(metric_col %in% c("breeding_richness", "breeding_lcbd", "FRic_breeding")) %>%
                          arrange(match(metric_col, c("breeding_richness", "breeding_lcbd", "FRic_breeding"))) %>%
                          bind_cols(y_axis = c(TRUE, FALSE, FALSE)) %>%
-                         mutate(xlab = c("Species Richness", "LCBD", "Functional Richness")),
+                         mutate(xlab = c("Species Richness", "Uniqueness", "Functional Richness")),
                        function(metric_col, xlab, y_axis){
                          col = sym(metric_col)
 

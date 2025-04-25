@@ -82,7 +82,7 @@ plot_metric_map <- function(data, metric_col, legend_title){
 }
 
 
-metric_plot_df <- tibble(metric_col = c("breeding_richness", "ecoregion_breeding_lcbd", "FRic_breeding"), legend_title = c("Richness", "LCBD", "Functional \nRichness"))
+metric_plot_df <- tibble(metric_col = c("breeding_richness", "ecoregion_breeding_lcbd", "FRic_breeding"), legend_title = c("Richness", "Uniqueness", "Functional \nRichness"))
 
 metric_plot_list <- pmap(metric_plot_df, plot_metric_map, data = biodiv_zonal_vec)
 
@@ -289,7 +289,7 @@ ggsave(here::here("figures/metric_bivar.png"), bivar_plot_join, bg = "transparen
 #   #plot_layout(widths = c(2,1))
 
 
-bivar_hotspot <-  (bivar_plot_list[[1]] + bivar_plot_list[[2]] + bivar_plot_list[[3]] +
+bivar_hotspot <- (bivar_plot_list[[1]] + bivar_plot_list[[2]] + bivar_plot_list[[3]] +
      (plot_spacer() + legend + plot_spacer() + plot_layout(widths = c(1,4,3))) +
      plot_layout(nrow = 1, width = c(1,1,1,1), heights = c(1,1,1,.5))) /
   (hotspot_plot_list[[1]] + hotspot_plot_list[[2]] + hotspot_plot_list[[3]] + guide_area() + plot_layout(guides = "collect", nrow = 1))
