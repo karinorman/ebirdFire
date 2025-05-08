@@ -12,7 +12,7 @@ load(here::here("data/species_range_metrics.rda"))
 load(here::here("data/pop_mets.rda"))
 
 traits_df <- species_range_metrics %>%
-  filter(wus_percent > 0.1) %>%
+  #filter(wus_percent > 0.1) %>%
   left_join(avonet_ebird_matched) %>%
   select(-c(scientific.name, taxon_concept_id, avonet_sciname,
             avonet_taxon_concept_id, avonet_family, avonet_order,
