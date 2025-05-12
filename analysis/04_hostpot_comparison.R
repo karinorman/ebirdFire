@@ -234,7 +234,7 @@ sig_ecoregions_fig <- sig_ecoregions_plot_df %>%
   ggplot(aes(y = reorder(plot_eco_name, ECO_NUM, decreasing = TRUE), x = metric, fill = test_tail)) +
   geom_tile(alpha = 0.8, color = "white") +
   theme_minimal() +
-  scale_fill_manual(values = list("lower" = "#5296A5", "upper" = "#BC4749"), labels = list("lower" = "lower tail", "upper" = "upper tail"),
+  scale_fill_manual(values = list("lower" = "#5296A5", "upper" = "#BC4749"), labels = list("lower" = "low severity", "upper" = "high severity"),
                     na.value = "lightgrey") +
   scale_y_discrete(expand = c(0,0),
                    position = "left") +
