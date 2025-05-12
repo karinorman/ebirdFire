@@ -122,7 +122,7 @@ plot_hotspot_types <- function(data, metric_col){
           legend.box.background = element_rect(fill = NA, color = NA),
           legend.key = element_rect(fill = "transparent"),
           legend.box = element_blank(),
-          legend.text = element_text(size = 14),
+          legend.text = element_text(size = 20),
           legend.key.size = unit(3,"line")
     )
 }
@@ -209,7 +209,7 @@ legend <- ggplot() +
   labs(x="Biodiversity Metric \U2192",y="Fire Severity \U2192") +
   # make font small enough
   theme(
-    axis.title = element_text(size = 14),
+    axis.title = element_text(size = 19),
     axis.title.y = element_text(angle=90),
     axis.line=element_blank(),
     axis.ticks=element_blank(),
@@ -290,7 +290,7 @@ ggsave(here::here("figures/metric_bivar.png"), bivar_plot_join, bg = "transparen
 
 
 bivar_hotspot <- (bivar_plot_list[[1]] + bivar_plot_list[[2]] + bivar_plot_list[[3]] +
-     (plot_spacer() + legend + plot_spacer() + plot_layout(widths = c(1,4,3))) +
+     (plot_spacer() + legend + plot_spacer() + plot_layout(widths = c(1,5,2))) +
      plot_layout(nrow = 1, width = c(1,1,1,1), heights = c(1,1,1,.5))) /
   (hotspot_plot_list[[1]] + hotspot_plot_list[[2]] + hotspot_plot_list[[3]] + guide_area() + plot_layout(guides = "collect", nrow = 1))
 
