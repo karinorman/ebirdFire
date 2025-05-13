@@ -89,11 +89,29 @@ metric_plot_list <- pmap(metric_plot_df, plot_metric_map, data = biodiv_zonal_ve
 #metric_join_plot <- wrap_plots(metric_plot_list, nrow = 1) + plot_annotation(tag_levels = "A")
 metric_join_plot <- plot_grid(metric_plot_list[[1]], metric_plot_list[[2]], metric_plot_list[[3]], nrow = 1)
 
-#ggsave(here::here("figures/huc12_metric_join.jpeg"), metric_join_plot)
 save_plot(here::here("figures/huc12_metric_join.jpeg"), metric_join_plot, nrow = 1, dpi = 800, base_width = 12)
 
 # ecoregion_lcbd <- plot_metric_map(data = biodiv_zonal_vec, metric_col = "ecoregion_breeding_lcbd", legend_title = "LCBD")
 # ggsave(here::here("figures/huc12_ecoreg_lcbd.jpeg"), ecoregion_lcbd)
+
+
+#### figures for supplement ####
+# functional divergence and evenness
+fmets_plot_list <- pmap(tibble(metric_col = c("FEve_breeding", "FDiv_breeding", "FEve_nonbreeding", "FDiv_nonbreeding"),
+                               legend_title = c("Functional \nEvenness", "Functional \nDivergence", "Functional \nEvenness", "Functional \nDivergence")),
+                        plot_metric_map, data = biodiv_zonal_vec)
+
+fmets_join <- plot_grid(fmets_plot_list[[1]], fmets_plot_list[[2]], fmets_plot_list[[3]], fmets_plot_list[[4]], nrow = 2)
+save_plot(here::here("figures/huc12_fmets_join.jpeg"), fmets_join, nrow = 2, dpi = 800, base_width = 8)
+
+# non breeding metrics
+nonbreed_plot_list <- pmap(tibble(metric_col = c("nonbreeding_richness", "ecoregion_nonbreeding_lcbd", "FRic_nonbreeding"),
+                                  legend_title = c("Richness", "Uniqueness", "Functional \nRichness")),
+                           plot_metric_map, data = biodiv_zonal_vec)
+
+nonbreeding_join_plot <- plot_grid(nonbreed_plot_list[[1]], nonbreed_plot_list[[2]], nonbreed_plot_list[[3]], nrow = 1)
+
+save_plot(here::here("figures/huc12_nonbreeding_join.jpeg"), nonbreeding_join_plot, nrow = 1, dpi = 800, base_width = 12)
 
 #####################
 ### Hotspot Types ###
@@ -137,6 +155,17 @@ hotspot_type_figure <- patchwork::wrap_plots(hotspot_plot_list, nrow = 1, guides
 
 ggsave(here::here("figures/huc12_hotspot_join.jpeg"), hotspot_type_figure, width = 180, height = 100, unit = "mm", dpi = 1000)
 
+### supplement figures ###
+
+# other functional diversity metrics
+hotspot_fmet_list <- map(c("FEve_breeding", "FDiv_breeding", "FEve_nonbreeding", "FDiv_nonbreeding"), plot_hotspot_types, data = ecoregion_hotspot_zonal_vec)
+hotspot_fmet_figure <- patchwork::wrap_plots(hotspot_fmet_list, nrow = 2, guides = "collect")# +
+ggsave(here::here("figures/huc12_hotspot_fmet.jpeg"), hotspot_fmet_figure, width = 240, height = 200, unit = "mm", dpi = 1000)
+
+# nonbreeding communities
+hotspot_nonbreed_list <- map(c("nonbreeding_richness", "ecoregion_nonbreeding_lcbd", "FRic_nonbreeding"), plot_hotspot_types, data = ecoregion_hotspot_zonal_vec)
+hotspot_nonbreed_figure <- patchwork::wrap_plots(hotspot_nonbreed_list, nrow = 1, guides = "collect")
+ggsave(here::here("figures/huc12_hotspot_nonbreed.jpeg"), hotspot_nonbreed_figure, width = 180, height = 100, unit = "mm", dpi = 1000)
 
 ##### Congruence map between richness, lcbd, fric
 cong_hotspot <- ecoregion_hotspot_zonal_vec %>%
