@@ -67,7 +67,7 @@ model_output_supp <- model_output_df %>%
   select(-percent_type) %>%
   mutate(across(where(~is.numeric(.x)), round, 2))
 
-readr::write_csv(model_output_supp, here::here("figures/model_output_supp.csv"))
+readr::write_csv(model_output_supp, here::here("supplement/model_output_supp.csv"))
 
 # habitat_contrasts <- emmeans(habitat_fit, pairwise ~ Habitat, data = traits_df)$contrasts %>% as.data.frame()
 #
@@ -103,3 +103,25 @@ percent_hist <- traits_df %>%
   )
 
 ggsave(here::here("figures/percent_pop_hist.png"), percent_hist, width = 17, height = 10, bg = "transparent")
+
+
+###################################
+## save out for supplement table ##
+###################################
+
+load(here::here('data/species_layers_df.rda'))
+
+species_df_out <- species_range_metrics %>%
+  left_join(avonet_ebird_matched) %>%
+  select(-c(taxon_concept_id, avonet_sciname,
+            avonet_taxon_concept_id, avonet_family, avonet_order,
+            total_area, wus_area, wus_percent, sev_area)) %>%
+  left_join(pop_mets %>% select(species_code, ends_with ("_percent"), type)) %>%
+  select(species_code, scientific_name = scientific.name, type,
+         percent_forested_population = sev_forest_percent, percent_global_population = total_percent) %>%
+  left_join(species_layers_df %>% select(species_code, year)) %>%
+  select(species_code, scientific_name, data_year = year, type, percent_forested_population, percent_global_population) %>%
+  arrange(desc(percent_global_population)) %>%
+  filter(percent_global_population > 0)
+
+readr::write_csv(species_df_out, here::here("supplement/species_pop_percents.csv"))
