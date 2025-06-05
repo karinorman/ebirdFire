@@ -1,0 +1,83 @@
+using CSV
+using Tables
+using Statistics
+using DataFrames
+using DataFramesMeta
+
+#### Beta diversity calculation functions
+
+## Function to calculate beta diversity statistics
+"""
+    betadiv(Y::Matrix)
+
+Computes the beta diversity statistics from the community matrix `Y` based on
+Legendre & De Cáceres (2013). This function was based on the `beta.div` R
+function from the supplementary material of that paper, and results were also
+tested against the `beta.div` function from `adespatial`.
+"""
+function betadiv(Y::Matrix)
+    @assert !any(isnothing, Y) "Y must only contain observed sites and no nothing values"
+    # S -> squared deviations from column mean
+    S = (Y .- mean(Y; dims=1)) .^ 2.0
+    # SStotal -> total sum of squares
+    SStotal = sum(S)
+    # BDtotal -> index of beta diversity, unbiased & comparable estimator of Var(Y)
+    BDtotal = SStotal / (size(Y, 1) - 1)
+    # SSj -> sum of squares for species j
+    SSj = sum(S; dims=1)
+    # SCBDj -> species contribution to beta diversity (species j, relative)
+    SCBDj = SSj ./ SStotal
+    # SSi -> sum of squares for site i
+    SSi = sum(S; dims=2)
+    # LCBD -> local contribution to beta diversity (site i, relative)
+    LCBDi = SSi ./ SStotal
+    # Combine results in tuple
+    res = (
+        S=S, SStotal=SStotal, BDtotal=BDtotal, SSj=SSj, SCBDj=SCBDj, SSi=SSi, LCBDi=LCBDi
+    )
+    return res
+end
+
+function scaledLCBD(Y::DataFrame)
+    #figure out how to propogate and identifying label as a column
+    commMat = Y[:, Not([:cell, :ECO_NAME])] |> Tables.matrix
+
+
+    betaTuple = betadiv(commMat) 
+    lcbdVals = betaTuple.LCBDi
+    lcbdVals = lcbdVals ./ maximum(lcbdVals)
+
+    lcbdDF = DataFrame(cell = Y[:, :cell], LCBD = vec(lcbdVals))
+
+    return lcbdDF
+end
+
+
+
+
+breeding_df = DataFrame(CSV.File("/Users/karinorman/Documents/Projects/ebirdFire/data/breeding_occ_mat.csv"))
+nonbreeding_df = DataFrame(CSV.File("/Users/karinorman/Documents/Projects/ebirdFire/data/nonbreeding_occ_mat.csv")) 
+
+grouped = groupby(filter(:ECO_NAME => n -> n != "NA", breeding_df), :ECO_NAME)
+
+
+breeding_mat = breeding_df[:, Not([:cell, :ECO_NAME])] |> Tables.matrix
+nonbreeding_mat = nonbreeding_df[:, Not(:cell)] |> Tables.matrix
+
+mat_list = [breeding_mat, nonbreeding_mat]
+
+
+breeding = betadiv(breeding_mat)
+nonbreeding = betadiv(nonbreeding_mat)
+
+breedingVals = breeding.LCBDi
+breedingVals = breedingVals ./ maximum(breedingVals)
+
+nonbreedingVals = nonbreeding.LCBDi
+nonbreedingVals = nonbreedingVals ./ maximum(nonbreedingVals)
+
+breeding_lcbd_df = DataFrame(cell = breeding_df[:, :cell], LCBD = vec(breedingVals))
+nonbreeding_lcbd_df = DataFrame(cell = nonbreeding_df[:, :cell], LCBD = vec(nonbreedingVals))
+
+CSV.write("/Users/karinorman/Documents/Projects/ebirdFire/data/breeding_lcbd.csv", breeding_lcbd_df)
+CSV.write("/Users/karinorman/Documents/Projects/ebirdFire/data/nonbreeding_lcbd.csv", nonbreeding_lcbd_df)
