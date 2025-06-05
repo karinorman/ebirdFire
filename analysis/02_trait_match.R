@@ -1,3 +1,5 @@
+library(dplyr)
+
 # Script to pair AVONET traits with ebird species
 
 # get species list
