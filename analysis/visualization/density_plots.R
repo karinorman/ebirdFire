@@ -297,35 +297,7 @@ cascades_plt_join <- long_metric %>%
                       quantile_lines = TRUE, quantiles = 2) +
                       #quantile_fun = function(x, ...)mean(x)) +
   #geom_vline(data = density_meds, aes(xintercept = value, color = factor(cbi, levels = c("2", "1")))) +
-  facet_grid(.~metric, scales = "free_x") + #, strip.position = "bottom") +
-  theme_classic() +
-  ylab(element_blank()) +
-  scale_fill_manual(values = list(`2` = "#bd1b19", `1` = "#e1ad01"),
-                    labels = c("high severity", "low severity")) +
-  xlab("") +
-  theme(text = element_text(size = 15),
-        legend.title = element_blank(),
-        strip.placement = "outside",   # format to look like title
-        strip.background = element_blank()
-  ) +
-  scale_y_discrete(expand = c(0,0),
-                   labels = list("West Cascades", "East Cascades"))
-
-# attempt with line extending beyond, can't split between ecoregion yet
-long_metric %>%
-  filter(cbi %in% c(1, 2),
-         ecoregion %in% c("West Cascades", "East Cascades - Modoc Plateau")) %>%
-  mutate(fill_var = paste(ecoregion, cbi)) %>%
-  filter(cbi %in% c(1,2)) %>%
-  ggplot(aes(x = value, y = forcats::fct_rev(factor(ecoregion, levels = pal_df$ecoregion_names)),
-             fill = factor(cbi, levels = c("2", "1"))#,
-             #height = ..ndensity..
-  )) +
-  geom_density_ridges(alpha = 0.75) +
-  #quantile_lines = TRUE, quantiles = 2) +
-  #quantile_fun = function(x, ...)mean(x)) +
-  geom_vline(data = density_meds, aes(xintercept = value, color = factor(cbi, levels = c("2", "1")))) +
-  facet_grid(.~metric, scales = "free_x") + #, strip.position = "bottom") +
+  facet_wrap("metric", nrow = 1, scales = "free_x", strip.position = "bottom") +
   theme_classic() +
   ylab(element_blank()) +
   scale_fill_manual(values = list(`2` = "#bd1b19", `1` = "#e1ad01"),
