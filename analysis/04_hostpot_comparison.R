@@ -174,6 +174,12 @@ binomial_test <- binomial_df %>%
          metric = stringr::str_remove(hotspot_type, "forest_")) %>%
   select(-hotspot_type)
 
+# write out for supplement
+binomial_df %>%
+  filter(hotspot_type %in%
+           c("ecoregion_breeding_lcbd", "breeding_richness", "FRic_breeding")) %>%
+  readr::write_csv(here::here("supplement/binomial_test.csv"))
+
 # ecoregions that are significant for upper tail test
 greater_sig_ecoregions <- binomial_test %>% filter(greater.p.value < 0.05) %>%
   filter(!metric %in% c("breeding_lcbd", "nonbreeding_lcbd")) %>%
