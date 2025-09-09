@@ -90,7 +90,7 @@ metric_plot_list <- pmap(metric_plot_df, plot_metric_map, data = biodiv_zonal_ve
 metric_join_plot <- plot_grid(metric_plot_list[[1]], metric_plot_list[[2]], metric_plot_list[[3]], nrow = 1)
 
 save_plot(here::here("figures/huc12_metric_join.jpeg"), metric_join_plot, nrow = 1, dpi = 800, base_width = 12)
-
+ggsave(here::here("figures/huc12_species_richness.png"), metric_plot_list[[1]], dpi = 800, bg = "transparent")
 # ecoregion_lcbd <- plot_metric_map(data = biodiv_zonal_vec, metric_col = "ecoregion_breeding_lcbd", legend_title = "LCBD")
 # ggsave(here::here("figures/huc12_ecoreg_lcbd.jpeg"), ecoregion_lcbd)
 

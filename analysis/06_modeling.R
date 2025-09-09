@@ -104,6 +104,33 @@ percent_hist <- traits_df %>%
 
 ggsave(here::here("figures/percent_pop_hist.png"), percent_hist, width = 17, height = 10, bg = "transparent")
 
+### Histogram for SW species only
+
+load(here::here("data/sw_species.rda"))
+
+sw_percent_hist <- traits_df %>%
+  right_join(sw_species, by = c("species_code", "type" = "range_type")) %>%
+  mutate(percent = total_percent * 100) %>%
+  ggplot(aes(percent)) +
+  geom_histogram(color = "#000000", fill = "#82A6B1") +
+  theme_classic() +
+  xlab("Percent of Global Population") +
+  ylab("Species Count") +
+  theme(legend.title = element_blank(),
+        text = element_text(size=15),
+        panel.background = element_rect(fill = "transparent",
+                                        colour = NA_character_), # necessary to avoid drawing panel outline
+        panel.grid.major = element_blank(), # get rid of major grid
+        panel.grid.minor = element_blank(), # get rid of minor grid
+        plot.background = element_rect(fill = "transparent",
+                                       colour = NA_character_), # necessary to avoid drawing plot outline
+        legend.background = element_rect(fill = NA, color = NA),
+        legend.box.background = element_rect(fill = NA, color = NA),
+        legend.key = element_rect(fill = "transparent"),
+        legend.box = element_blank()
+  )
+
+ggsave(here::here("figures/sw_percent_pop_hist.png"), sw_percent_hist, width = 17, height = 10, bg = "transparent")
 
 ###################################
 ## save out for supplement table ##

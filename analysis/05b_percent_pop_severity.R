@@ -83,3 +83,43 @@ pop_mets <- breeding_pop_mets %>%
         sev_forest_percent = sev_pop/forest_pop)
 
 usethis::use_data(pop_mets)
+
+#############################################
+### Let's find just SW species real quick ###
+#############################################
+
+sw_states <- rnaturalearth::ne_states(iso_a2 = "US") %>%
+  vect() %>%
+  project("epsg:4326") %>%
+  filter(name %in% c("Nevada", "Arizona", "Utah", "Texas", "New Mexico")) %>%
+  aggregate()
+
+species_df <- bind_rows(data.frame(path = list.files(here::here("data/species_ranges_wus/breeding/"), full.names = TRUE),
+                                   file = list.files(here::here("data/species_ranges_wus/breeding/")),
+           range_type = "breeding"),
+           data.frame(path = list.files(here::here("data/species_ranges_wus/non_breeding/"), full.names = TRUE),
+                      file = list.files(here::here("data/species_ranges_wus/non_breeding/")),
+          range_type = "nonbreeding"),
+          data.frame(path = list.files(here::here("data/species_ranges_wus/resident/"), full.names = TRUE),
+                     file = list.files(here::here("data/species_ranges_wus/resident/")),
+                     range_type = "resident")) %>%
+  tidyr::separate(file, c("species_code"))
+
+
+sw_occ_df <- pmap_dfr(species_df, function(path, species_code, range_type){
+
+ # browser()
+  rast_crop <- rast(path) %>%
+    crop(sw_states) %>%
+    as.data.frame()
+
+  rast_perc <- sum(rast_crop) / dim(rast_crop)[1]
+
+  return(data.frame(species_code = species_code, sw_perc = rast_perc,
+                    range_type = range_type))
+})
+
+sw_species <- sw_occ_df %>%
+  filter(sw_perc > 0.15)
+
+usethis::use_data(sw_species)
