@@ -155,6 +155,47 @@ hotspot_type_figure <- patchwork::wrap_plots(hotspot_plot_list, nrow = 1, guides
 
 ggsave(here::here("figures/huc12_hotspot_join.jpeg"), hotspot_type_figure, width = 180, height = 100, unit = "mm", dpi = 1000)
 
+### SW Version Hotspots ###
+
+sw_states <- boundary_states %>%
+  filter(name %in% c("New Mexico", "Arizona"))
+
+plot_sw_hotspot <- function(data, metric_col){
+
+  col = sym(metric_col)
+
+  ggplot() +
+    geom_spatvector(data = sw_states, color = "black", fill = "white") +
+    geom_spatvector(data = cbi_forest %>% crop(sw_states), fill = "#DDDDDDBF", color = "transparent", alpha = 0.4) +
+    geom_spatvector(data = data %>%
+                      crop(sw_states) %>%
+                      filter(!!sym(metric_col) == 1),
+                    aes(fill = hotspot_type, color = hotspot_type)) +
+    theme_void() +
+    scale_fill_manual(values = list(`Refugia` = "#82A6B1", `Area of Concern` =  "#BC4749", `Mixed` = "#D5A021"), na.value = "transparent") +
+    scale_color_manual(values = list(`Refugia` = "#82A6B1", `Area of Concern` =  "#BC4749", `Mixed` = "#D5A021"), na.value = "transparent") +
+    theme(legend.position = "none",
+          legend.title=element_blank(), panel.background = element_rect(fill = "transparent",
+                                                                        colour = NA_character_), # necessary to avoid drawing panel outline
+          panel.grid.major = element_blank(), # get rid of major grid
+          panel.grid.minor = element_blank(), # get rid of minor grid
+          plot.background = element_rect(fill = "transparent",
+                                         colour = NA_character_), # necessary to avoid drawing plot outline
+          legend.background = element_rect(fill = NA, color = NA),
+          legend.box.background = element_rect(fill = NA, color = NA),
+          legend.key = element_rect(fill = "transparent"),
+          legend.box = element_blank(),
+          legend.text = element_text(size = 20),
+          legend.key.size = unit(3,"line")
+    )
+}
+
+sw_hotspot_plot_list <- map(c("breeding_richness", "ecoregion_breeding_lcbd", "FRic_breeding"), plot_sw_hotspot, data = ecoregion_hotspot_zonal_vec)
+sw_hotspot_figure <- patchwork::wrap_plots(sw_hotspot_plot_list, nrow = 1, guides = "collect")# +
+#plot_annotation(tag_levels = "A")
+
+ggsave(here::here("figures/huc12_sw_hotspot.jpeg"), sw_hotspot_figure, width = 180, height = 100, unit = "mm", dpi = 1000)
+
 ### supplement figures ###
 
 # other functional diversity metrics
