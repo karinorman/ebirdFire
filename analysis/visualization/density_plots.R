@@ -270,11 +270,6 @@ density_plt_join <- patchwork::wrap_plots(density_plot_list, nrow = 1, axes = "c
 
 ## Alternate plotting with facets
 
-# get dataframe with medians for each density
-density_meds <- long_metric %>%
-  group_by(ecoregion, fill_var, cbi, metric) %>%
-  summarise(value = median(value))
-
 long_metric <- metric_stack_df %>%
   filter(cbi %in% c(1, 2),
          ecoregion %in% c("West Cascades", "East Cascades - Modoc Plateau")) %>%
@@ -283,6 +278,11 @@ long_metric <- metric_stack_df %>%
   pivot_longer(c(breeding_richness, ecoregion_breeding_lcbd, FRic_breeding), names_to = "metric", values_to = "value") %>%
   mutate(metric = factor(metric, levels = c("breeding_richness", "ecoregion_breeding_lcbd", "FRic_breeding"),
                          labels = c("Species Richness", "Uniqueness", "Functional Richness")))
+
+# get dataframe with medians for each density
+density_meds <- long_metric %>%
+  group_by(ecoregion, fill_var, cbi, metric) %>%
+  summarise(value = median(value))
 
 cascades_plt_join <- long_metric %>%
   filter(cbi %in% c(1, 2),
@@ -294,16 +294,18 @@ cascades_plt_join <- long_metric %>%
              #height = ..ndensity..
   )) +
   geom_density_ridges(alpha = 0.75,
-                      quantile_lines = TRUE, quantiles = 2) +
+                      quantile_lines = TRUE, quantiles = 2, linewidth = 0.01) +
                       #quantile_fun = function(x, ...)mean(x)) +
   #geom_vline(data = density_meds, aes(xintercept = value, color = factor(cbi, levels = c("2", "1")))) +
   facet_wrap("metric", nrow = 1, scales = "free_x", strip.position = "bottom") +
-  theme_classic() +
+  theme_classic(base_size = 2) +
   ylab(element_blank()) +
   scale_fill_manual(values = list(`2` = "#bd1b19", `1` = "#e1ad01"),
                     labels = c("high severity", "low severity")) +
   xlab("") +
-  theme(text = element_text(size = 15),
+  theme(legend.key.size=unit(2.5,'mm'),
+        text = element_text(size = 4),
+        axis.text  = element_text(size = 2.5),
         legend.title = element_blank(),
         strip.placement = "outside",   # format to look like title
         strip.background = element_blank()
@@ -311,7 +313,7 @@ cascades_plt_join <- long_metric %>%
   scale_y_discrete(expand = c(0,0),
                    labels = list("West Cascades", "East Cascades"))
 
-ggsave(here::here("figures/cascades_density.jpeg"), cascades_plt_join, width = 15, height = 5.5, units = "in", dpi = 800)
+ggsave(here::here("figures/cascades_density.pdf"), cascades_plt_join, width = 88, height = 35, units = "mm", dpi = 50)
 
 ### Ecoregion Map with color assignments ###
 US_boundary <- rnaturalearth::ne_states(iso_a2 = "US") %>%

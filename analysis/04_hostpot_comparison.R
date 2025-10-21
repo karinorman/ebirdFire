@@ -238,7 +238,7 @@ sig_ecoregions_fig <- sig_ecoregions_plot_df %>%
   filter(metric %in% c("breeding_richness", "FRic_breeding", "ecoregion_breeding_lcbd")) %>%
   select(plot_eco_name, ECO_NUM, test_tail, metric) %>%
   ggplot(aes(y = reorder(plot_eco_name, ECO_NUM, decreasing = TRUE), x = metric, fill = test_tail)) +
-  geom_tile(alpha = 0.8, color = "white") +
+  geom_tile(alpha = 0.8, color = "lightgrey") +
   theme_minimal() +
   scale_fill_manual(values = list("lower" = "#5296A5", "upper" = "#BC4749"), labels = list("lower" = "low severity", "upper" = "high severity"),
                     na.value = "lightgrey") +
@@ -247,12 +247,14 @@ sig_ecoregions_fig <- sig_ecoregions_plot_df %>%
   scale_x_discrete(labels = list("breeding_richness" = "Species Richness", "ecoregion_breeding_lcbd" = "Uniqueness",
                                  "FRic_breeding" = "Functional Richness"), position = "top",
                    expand = c(0,0)) +
-  theme(panel.grid = element_blank(),
+  theme(legend.key.size=unit(4,'mm'),
+        text = element_text(size = 7),
+        panel.grid = element_blank(),
         axis.title.x = element_blank(),
         axis.title.y = element_blank(),
         legend.title = element_blank(),
         axis.text.x = element_text(angle = 45, hjust = 0),
-        panel.border=element_rect(fill = NA, colour=alpha('lightgrey', .5),size=1)) +
+        panel.border=element_rect(fill = NA, colour=alpha('lightgrey', .5),size=0.5)) +
   coord_fixed()
 
 
@@ -310,16 +312,16 @@ set.seed(45)
 
 eco_plt <- ggplot() +
   geom_spatvector(data = US_boundary_states %>% crop(boundary), fill = NA, linetype = "dashed") +
-  geom_spatvector(data = boundary, fill = NA, color = "black") +
-  geom_spatvector(data = ecoregion_shp, aes(fill = ECO_NAME), alpha = 0.75) +
-  geom_point(data = eco_cent, aes(x = lon, y = lat), size = 8, shape = 21, color = "black", fill = "white") +
-  geom_text(data = eco_cent %>% select(ECO_NUM, lon, lat) %>% distinct(), aes(label = ECO_NUM, x = lon, y = lat)) +
+  geom_spatvector(data = boundary, fill = NA, color = "black", size = 0.25) +
+  geom_spatvector(data = ecoregion_shp, aes(fill = ECO_NAME), alpha = 0.75, size = 0.5) +
+  geom_point(data = eco_cent, aes(x = lon, y = lat), size = 4, shape = 21, color = "black", fill = "white", stroke = 0.2) +
+  geom_text(data = eco_cent %>% select(ECO_NUM, lon, lat) %>% distinct(), aes(label = ECO_NUM, x = lon, y = lat), size = 2) +
   scale_fill_manual(values = sample(pal(19))) +
   ggthemes::theme_map() +
   theme(legend.position = "none")
 
 sig_tail_join <- sig_ecoregions_fig + eco_plt + plot_layout(nrow = 1, widths = c(.3, 1.2))
-ggsave(here::here("figures/sig_tail_ecoregion_join.jpeg"), sig_tail_join, height = 200, width = 270, units = "mm", dpi = 800)
+ggsave(here::here("figures/sig_tail_ecoregion_join.pdf"), sig_tail_join, height = 120, width = 180, units = "mm", dpi = 800)
 
 
 # map(c("ecoregion_breeding_lcbd", "breeding_richness", "FRic_breeding"), function(metric_name) {

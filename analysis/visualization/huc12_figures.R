@@ -62,7 +62,7 @@ plot_metric_map <- function(data, metric_col, legend_title){
     theme_void() +
     viridis::scale_fill_viridis(name = legend_title) +
     viridis::scale_color_viridis(guide = "none") +
-    geom_spatvector(data = boundary_states, color = "lightgrey", fill = "transparent") +
+    geom_spatvector(data = boundary_states, color = "lightgrey", fill = "transparent", linewidth = 0.15) +
     geom_spatvector(data = boundary, color = "black", fill = "transparent") +
     theme(panel.background = element_rect(fill = "transparent",
                                           colour = NA_character_), # necessary to avoid drawing panel outline
@@ -73,12 +73,11 @@ plot_metric_map <- function(data, metric_col, legend_title){
           legend.background = element_rect(fill = NA, color = NA),
           legend.box.background = element_rect(fill = NA, color = NA),
           legend.key = element_rect(fill = "transparent"),
-          legend.box = element_blank(),
-          legend.key.size = unit(.5, 'cm')
-    ) #+
-    # theme(legend.key.size=unit(1,'mm'),
-    #       legend.text=element_text(size=6),
-    #       legend.title=element_text(size=7))
+          legend.box = element_blank()
+    ) +
+    theme(legend.key.size=unit(3,'mm'),
+          legend.text=element_text(size=6),
+          legend.title=element_text(size=7))
 }
 
 
@@ -89,8 +88,8 @@ metric_plot_list <- pmap(metric_plot_df, plot_metric_map, data = biodiv_zonal_ve
 #metric_join_plot <- wrap_plots(metric_plot_list, nrow = 1) + plot_annotation(tag_levels = "A")
 metric_join_plot <- plot_grid(metric_plot_list[[1]], metric_plot_list[[2]], metric_plot_list[[3]], nrow = 1)
 
-save_plot(here::here("figures/huc12_metric_join.jpeg"), metric_join_plot, nrow = 1, dpi = 800, base_width = 12)
-ggsave(here::here("figures/huc12_species_richness.png"), metric_plot_list[[1]], dpi = 800, bg = "transparent")
+save_plot(here::here("figures/huc12_metric_join.pdf"), metric_join_plot, nrow = 1, dpi = 50, base_width = 7)
+#ggsave(here::here("figures/huc12_species_richness.png"), metric_plot_list[[1]], dpi = 800, bg = "transparent")
 # ecoregion_lcbd <- plot_metric_map(data = biodiv_zonal_vec, metric_col = "ecoregion_breeding_lcbd", legend_title = "LCBD")
 # ggsave(here::here("figures/huc12_ecoreg_lcbd.jpeg"), ecoregion_lcbd)
 

@@ -187,9 +187,9 @@ hotspot_hist_list <- map(c("breeding_richness", "ecoregion_breeding_lcbd", "FRic
 # cowplot::save_plot(here::here("figures/huc12_hotspot_hist_join.jpeg"), hotspot_hist_figure, nrow = 1)
 
 hotspot_hist_figure <- (plot_spacer() + plot_spacer() + plot_spacer()) /
-  (wrap_elements(panel = grid::textGrob('Species Richness', gp=gpar(fontsize=16))) + wrap_elements(panel = grid::textGrob('Uniqueness', gp=gpar(fontsize=16))) + wrap_elements(panel = grid::textGrob('Functional Richness', gp=gpar(fontsize=16)))) /
+  (wrap_elements(panel = grid::textGrob('Species Richness', gp=grid::gpar(fontsize=16))) + wrap_elements(panel = grid::textGrob('Uniqueness', gp=gpar(fontsize=16))) + wrap_elements(panel = grid::textGrob('Functional Richness', gp=gpar(fontsize=16)))) /
   (hotspot_hist_list[[1]] + hotspot_hist_list[[2]] + hotspot_hist_list[[3]] + plot_layout(nrow = 1, guides = "collect")) +
-  plot_layout(heights = c(1.5, 0.1, 2))
+  plot_layout(heights = c(.01, 0.1, 2))
 
-ggsave(here::here("figures/huc12_hotspot_hist_join.jpeg"), hotspot_hist_figure, width = 420, height = 250, unit = "mm", dpi = 1000)
+ggsave(here::here("figures/huc12_hotspot_hist_join.pdf"), hotspot_hist_figure, width = 180, height = 64, unit = "mm")
 
