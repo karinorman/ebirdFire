@@ -77,7 +77,7 @@ plot_metric_map <- function(data, metric_col, legend_title){
     ) +
     theme(legend.key.size=unit(3,'mm'),
           legend.text=element_text(size=6),
-          legend.title=element_text(size=7))
+          legend.title=element_text(size=9))
 }
 
 
@@ -86,9 +86,9 @@ metric_plot_df <- tibble(metric_col = c("breeding_richness", "ecoregion_breeding
 metric_plot_list <- pmap(metric_plot_df, plot_metric_map, data = biodiv_zonal_vec)
 
 #metric_join_plot <- wrap_plots(metric_plot_list, nrow = 1) + plot_annotation(tag_levels = "A")
-metric_join_plot <- plot_grid(metric_plot_list[[1]], metric_plot_list[[2]], metric_plot_list[[3]], nrow = 1)
+metric_join_plot <- plot_grid(metric_plot_list[[1]], metric_plot_list[[2]], metric_plot_list[[3]], nrow = 1, labels = "AUTO", label_fontface = "plain")
 
-save_plot(here::here("figures/huc12_metric_join.pdf"), metric_join_plot, nrow = 1, dpi = 50, base_width = 7)
+save_plot(here::here("figures/huc12_metric_join.pdf"), metric_join_plot, nrow = 1, dpi = 300, base_width = 10.5)
 #ggsave(here::here("figures/huc12_species_richness.png"), metric_plot_list[[1]], dpi = 800, bg = "transparent")
 # ecoregion_lcbd <- plot_metric_map(data = biodiv_zonal_vec, metric_col = "ecoregion_breeding_lcbd", legend_title = "LCBD")
 # ggsave(here::here("figures/huc12_ecoreg_lcbd.jpeg"), ecoregion_lcbd)

@@ -19,6 +19,8 @@ traits_df <- species_range_metrics %>%
             total_area, wus_area, wus_percent, sev_area)) %>%
   left_join(pop_mets %>% select(species_code, ends_with ("_percent"), type))
 
+readr::write_csv(traits_df, here::here("data/traits_df.csv"))
+
 model_data <- traits_df %>%
   filter(forest_percent > 0.1) %>%
   rename(range = high_sev_percent, population = sev_forest_percent) %>%
